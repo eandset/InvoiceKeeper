@@ -54,6 +54,7 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 | Метод | Путь | Роль | Описание |
 |---|---|---|---|
 | `GET` | `/api/v1/users` | Admin | список пользователей |
+| `GET` | `/api/v1/users/{id}` | Admin | пользователь по идентификатору |
 | `POST` | `/api/v1/users` | Admin | создание пользователя |
 
 ```json

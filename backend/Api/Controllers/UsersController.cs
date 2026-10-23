@@ -26,6 +26,16 @@ public sealed class UsersController : ControllerBase
         return Ok(users);
     }
 
+    /// <summary>Пользователь по идентификатору.</summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<UserResponseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserResponseDto>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _authService.GetUserByIdAsync(id, cancellationToken);
+        return Ok(user);
+    }
+
     /// <summary>Создание нового пользователя (только администратор).</summary>
     [HttpPost]
     [ProducesResponseType<UserResponseDto>(StatusCodes.Status201Created)]
@@ -36,7 +46,7 @@ public sealed class UsersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var user = await _authService.CreateUserAsync(request, cancellationToken);
-        return Created($"/api/v1/users/{user.Id}", user);
+        return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
     }
 }
 

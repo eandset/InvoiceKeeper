@@ -35,9 +35,14 @@ public static class CorsConfiguration
                     return;
                 }
 
-                // Без явно заданных источников в остальных окружениях CORS фактически выключен.
-                policy.WithOrigins(origins)
-                    .AllowAnyHeader()
+                // Без явно заданных источников в остальных окружениях CORS фактически выключен:
+                // ни один источник не проходит проверку.
+                if (origins.Length > 0)
+                {
+                    policy.WithOrigins(origins);
+                }
+
+                policy.AllowAnyHeader()
                     .AllowAnyMethod();
             });
         });

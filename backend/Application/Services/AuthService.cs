@@ -78,5 +78,13 @@ public sealed class AuthService
             .OrderBy(u => u.Username)
             .Select(u => new UserResponseDto(u.Id, u.Username, u.Role.ToString(), u.CreatedAt))
             .ToListAsync(cancellationToken);
+
+    public async Task<UserResponseDto> GetUserByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == id)
+            .Select(u => new UserResponseDto(u.Id, u.Username, u.Role.ToString(), u.CreatedAt))
+            .SingleOrDefaultAsync(cancellationToken)
+        ?? throw new NotFoundException($"Пользователь {id} не найден.");
 }
 

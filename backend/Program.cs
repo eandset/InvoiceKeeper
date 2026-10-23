@@ -96,7 +96,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
     await app.MigrateDatabaseAsync();
 }
 
-if (app.Configuration.GetValue("Database:SeedOnStartup", app.Configuration.GetValue("Database:MigrateOnStartup", false)))
+if (app.Configuration.GetValue("Database:SeedOnStartup", true))
 {
     await app.SeedAdminAsync();
 }
