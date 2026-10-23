@@ -138,30 +138,57 @@ public sealed class PaymentService
                            o.DueDate > occurrence.DueDate,
                 cancellationToken);
 
+        PaymentOccurrence? nextOccurrence = null;
+        DateTime? nextDueDate = null;
+
         if (!hasLaterUnpaid)
         {
-            var nextDueDate = PeriodicityCalculator.Next(occurrence.DueDate, payment.Periodicity);
+            nextDueDate = PeriodicityCalculator.Next(occurrence.DueDate, payment.Periodicity);
+            var candidateDueDate = nextDueDate.Value;
 
             var exists = await _dbContext.PaymentOccurrences
-                .AnyAsync(o => o.RecurringPaymentId == payment.Id && o.DueDate == nextDueDate,
+                .AnyAsync(o => o.RecurringPaymentId == payment.Id && o.DueDate == candidateDueDate,
                     cancellationToken);
 
             if (!exists)
             {
-                _dbContext.PaymentOccurrences.Add(new PaymentOccurrence
+                nextOccurrence = new PaymentOccurrence
                 {
                     RecurringPaymentId = payment.Id,
-                    DueDate = nextDueDate
-                });
+                    DueDate = candidateDueDate
+                };
+                _dbContext.PaymentOccurrences.Add(nextOccurrence);
             }
 
-            if (payment.NextPaymentDate < nextDueDate)
+            if (payment.NextPaymentDate < candidateDueDate)
             {
-                payment.NextPaymentDate = nextDueDate;
+                payment.NextPaymentDate = candidateDueDate;
             }
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Параллельный запрос мог успеть создать период на ту же дату (уникальный индекс).
+            // Если такой период уже есть, операция фактически выполнена.
+            if (nextOccurrence is not null)
+            {
+                _dbContext.Entry(nextOccurrence).State = EntityState.Detached;
+            }
+
+            var alreadyCreated = nextDueDate is not null && await _dbContext.PaymentOccurrences
+                .AsNoTracking()
+                .AnyAsync(o => o.RecurringPaymentId == payment.Id && o.DueDate == nextDueDate.Value,
+                    cancellationToken);
+
+            if (!alreadyCreated)
+            {
+                throw;
+            }
+        }
 
         // Возвращаем актуальное состояние периода после возможного добавления следующего.
         return PaymentMapper.ToOccurrenceDto(occurrence, payment);
