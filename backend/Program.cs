@@ -1,5 +1,8 @@
+using InvoiceKeeper.Infrastructure.Configuration;
 using InvoiceKeeper.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+
+DotEnvLoader.LoadFromDirectoryTree(Directory.GetCurrentDirectory());
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(DatabaseConnectionString.Resolve(builder.Configuration)));
 
 var app = builder.Build();
 
