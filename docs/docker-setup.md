@@ -47,6 +47,10 @@ POSTGRES_PASSWORD=change-me-please
 | `POSTGRES_PORT` | нет | `5432` | Порт PostgreSQL на хосте |
 | `BACKEND_PORT` | нет | `8080` | Порт backend на хосте |
 | `ASPNETCORE_ENVIRONMENT` | нет | `Development` | Окружение ASP.NET Core |
+| `JWT_SECRET` | да | — | Ключ подписи JWT, минимум 32 символа |
+| `ADMIN_USERNAME` | нет | `admin` | Логин администратора при первом запуске |
+| `ADMIN_PASSWORD` | да | — | Пароль администратора |
+| `BOT_SERVICE_TOKEN` | да | — | Сервисный токен Telegram-бота (`X-Service-Token`) |
 
 > Пароль из `.env` читается и `docker compose`, и самим приложением при локальном запуске
 > (`dotnet run`): файл подхватывается из корня репозитория автоматически.
@@ -91,9 +95,11 @@ docker compose up -d
 1. Скачается образ `postgres:16-alpine` и поднимется контейнер `db`.
 2. Compose дождётся healthcheck (`pg_isready`).
 3. Соберётся образ backend из `backend/Dockerfile`.
-4. Backend применит EF Core миграции (`Database__MigrateOnStartup=true`) и запустится на порту 8080.
+4. Backend применит EF Core миграции (`Database__MigrateOnStartup=true`), создаст
+   администратора из `ADMIN_USERNAME`/`ADMIN_PASSWORD` и запустится на порту 8080.
 
 Приложение: http://localhost:8080
+Swagger UI: http://localhost:8080/swagger
 
 ## 3. Полезные команды
 
@@ -149,7 +155,16 @@ dotnet ef migrations add <Name> --project backend --output-dir Infrastructure/Da
 Database__MigrateOnStartup=false
 ```
 
-## 6. Диагностика
+## 6. Тесты
+
+```bash
+dotnet test backend/tests/InvoiceKeeper.Tests.csproj
+```
+
+Интеграционные тесты используют PostgreSQL и пропускаются, если не задан
+`POSTGRES_PASSWORD`. Подробнее: [backend-api.md](backend-api.md).
+
+## 7. Диагностика
 
 | Проблема | Причина | Решение |
 |---|---|---|
