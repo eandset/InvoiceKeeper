@@ -8,9 +8,10 @@ public sealed class PostgresFactAttribute : FactAttribute
 {
     public PostgresFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")))
+        if (TestEnvironment.Get("POSTGRES_PASSWORD") is null)
         {
-            Skip = "Задайте POSTGRES_PASSWORD, чтобы запустить интеграционные тесты с PostgreSQL.";
+            Skip = "Задайте POSTGRES_PASSWORD в .env или в переменных окружения, " +
+                   "чтобы запустить интеграционные тесты с PostgreSQL.";
         }
     }
 }

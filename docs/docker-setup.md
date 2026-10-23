@@ -162,7 +162,8 @@ dotnet test backend/tests/InvoiceKeeper.Tests.csproj
 ```
 
 Интеграционные тесты используют PostgreSQL и пропускаются, если не задан
-`POSTGRES_PASSWORD`. Подробнее: [backend-api.md](backend-api.md).
+`POSTGRES_PASSWORD` (в окружении или в корневом `.env` — файл подхватывается
+автоматически). Подробнее: [backend-api.md](backend-api.md).
 
 ## 7. Диагностика
 

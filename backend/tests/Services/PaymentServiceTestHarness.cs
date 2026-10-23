@@ -1,4 +1,5 @@
 using InvoiceKeeper.Infrastructure.Data;
+using InvoiceKeeper.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceKeeper.Tests.Services;
@@ -21,12 +22,11 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
 
     public static async Task<PostgresTestDatabase> CreateAsync()
     {
-        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-        ArgumentException.ThrowIfNullOrWhiteSpace(password);
+        var password = TestEnvironment.GetRequired("POSTGRES_PASSWORD");
 
-        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
-        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-        var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
+        var host = TestEnvironment.Get("POSTGRES_HOST") ?? "localhost";
+        var port = TestEnvironment.Get("POSTGRES_PORT") ?? "5432";
+        var username = TestEnvironment.Get("POSTGRES_USER") ?? "postgres";
         var databaseName = $"invoice_keeper_test_{Guid.NewGuid():N}";
 
         var adminConnectionString =
@@ -56,10 +56,10 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
         await Context.Database.CloseConnectionAsync();
         await Context.DisposeAsync();
 
-        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")!;
-        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
-        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-        var username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
+        var password = TestEnvironment.GetRequired("POSTGRES_PASSWORD");
+        var host = TestEnvironment.Get("POSTGRES_HOST") ?? "localhost";
+        var port = TestEnvironment.Get("POSTGRES_PORT") ?? "5432";
+        var username = TestEnvironment.Get("POSTGRES_USER") ?? "postgres";
 
         await using var admin = new Npgsql.NpgsqlConnection(
             $"Host={host};Port={port};Database=postgres;Username={username};Password={password}");
