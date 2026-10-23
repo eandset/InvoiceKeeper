@@ -11,6 +11,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
+// Apply pending migrations so `docker compose up` brings up a ready-to-use database.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+{
+    await app.MigrateDatabaseAsync();
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
