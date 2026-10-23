@@ -1,6 +1,12 @@
 using InvoiceKeeper.Infrastructure.Configuration;
 using InvoiceKeeper.Infrastructure.Data;
+using InvoiceKeeper.Infrastructure.Data.Seed;
+using InvoiceKeeper.Infrastructure.Security;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 DotEnvLoader.LoadFromDirectoryTree(Directory.GetCurrentDirectory());
 
@@ -12,12 +18,76 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(DatabaseConnectionString.Resolve(builder.Configuration)));
 
+var jwtOptions = JwtOptionsResolver.Resolve(builder.Configuration, builder.Environment);
+
+builder.Services.Configure<JwtOptions>(options =>
+{
+    options.Secret = jwtOptions.Secret;
+    options.Issuer = jwtOptions.Issuer;
+    options.Audience = jwtOptions.Audience;
+    options.ExpiryInHours = jwtOptions.ExpiryInHours;
+});
+
+builder.Services.Configure<BotAuthOptions>(options =>
+{
+    var section = builder.Configuration.GetSection(BotAuthOptions.SectionName);
+    options.Token = section["Token"] ?? builder.Configuration["BOT_SERVICE_TOKEN"] ?? string.Empty;
+    options.ServiceName = section["ServiceName"] ?? options.ServiceName;
+});
+
+builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<AdminSeeder>();
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme = "Multi";
+        options.DefaultAuthenticateScheme = "Multi";
+        options.DefaultChallengeScheme = "Multi";
+    })
+    .AddPolicyScheme("Multi", "JWT or service token", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+            context.Request.Headers.ContainsKey("Authorization")
+                ? JwtBearerDefaults.AuthenticationScheme
+                : ServiceTokenAuthenticationHandler.SchemeName;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    })
+    .AddScheme<AuthenticationSchemeOptions, ServiceTokenAuthenticationHandler>(
+        ServiceTokenAuthenticationHandler.SchemeName, _ => { });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("UserOrAdmin", policy => policy.RequireRole("Admin", "User"));
+    options.AddPolicy("ServiceOrAdmin", policy => policy.RequireRole("Admin", ServiceTokenAuthenticationHandler.ServiceRole));
+});
+
 var app = builder.Build();
 
 // Apply pending migrations so `docker compose up` brings up a ready-to-use database.
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 {
     await app.MigrateDatabaseAsync();
+}
+
+if (app.Configuration.GetValue("Database:SeedOnStartup", app.Configuration.GetValue("Database:MigrateOnStartup", false)))
+{
+    await app.SeedAdminAsync();
 }
 
 // Configure the HTTP request pipeline.
@@ -31,6 +101,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
