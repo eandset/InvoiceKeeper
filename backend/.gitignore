@@ -1,0 +1,28 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Tt]emp/
+
+# Visual Studio / Rider
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ASP.NET Core published files
+x86/
+x64/
+[Aa]pp_localDataDirectories/
+*.publishsettings
+
+# ASP.NET Database files (если вдруг локально создаются SQLite/LocalDB)
+*.mdf
+*.ldf
+*.sqlite
+*.db
+
+# User-specific secrets
+secrets.json

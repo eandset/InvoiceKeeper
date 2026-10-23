@@ -1,0 +1,16 @@
+# Игнорировать служебные папки IDE
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Системные файлы ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Общие файлы окружения с паролями и токенами
+.env
+*.local
