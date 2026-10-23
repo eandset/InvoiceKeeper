@@ -68,11 +68,13 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                     b.HasIndex("IsPaid")
                         .HasDatabaseName("idx_occurrences_is_paid");
 
-                    b.HasIndex("RecurringPaymentId");
-
                     b.HasIndex("ReminderSent")
                         .HasDatabaseName("idx_occurrences_reminder_sent")
                         .HasFilter("reminder_sent = FALSE");
+
+                    b.HasIndex("RecurringPaymentId", "DueDate")
+                        .IsUnique()
+                        .HasDatabaseName("ux_occurrences_payment_due_date");
 
                     b.ToTable("payment_occurrences", (string)null);
                 });

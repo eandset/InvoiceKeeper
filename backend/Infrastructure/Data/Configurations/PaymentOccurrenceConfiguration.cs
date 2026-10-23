@@ -49,5 +49,10 @@ public class PaymentOccurrenceConfiguration : IEntityTypeConfiguration<PaymentOc
         builder.HasIndex(po => po.ReminderSent)
             .HasDatabaseName("idx_occurrences_reminder_sent")
             .HasFilter("reminder_sent = FALSE");
+
+        // Для одного платежа не может быть двух периодов с одинаковым сроком оплаты.
+        builder.HasIndex(po => new { po.RecurringPaymentId, po.DueDate })
+            .IsUnique()
+            .HasDatabaseName("ux_occurrences_payment_due_date");
     }
 }

@@ -1,3 +1,7 @@
+using InvoiceKeeper.Api.Configuration;
+using InvoiceKeeper.Api.OpenApi;
+using InvoiceKeeper.Api.Middleware;
+using InvoiceKeeper.Application.Services;
 using InvoiceKeeper.Infrastructure.Configuration;
 using InvoiceKeeper.Infrastructure.Data;
 using InvoiceKeeper.Infrastructure.Data.Seed;
@@ -38,6 +42,11 @@ builder.Services.Configure<BotAuthOptions>(options =>
 builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<AdminSeeder>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<PaymentService>();
+
+builder.Services.AddApiDocumentation();
+builder.Services.AddWebClientCors(builder.Configuration, builder.Environment);
 
 builder.Services
     .AddAuthentication(options =>
@@ -79,6 +88,8 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+app.UseMiddleware<ApiExceptionHandlingMiddleware>();
+
 // Apply pending migrations so `docker compose up` brings up a ready-to-use database.
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 {
@@ -98,13 +109,23 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// В контейнере TLS обычно завершается на reverse proxy, поэтому редирект можно отключить.
+if (app.Configuration.GetValue("HttpsRedirection:Enabled", true))
+{
+    app.UseHttpsRedirection();
+}
 app.UseRouting();
+
+app.UseCors(CorsConfiguration.PolicyName);
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseApiDocumentation();
+
 app.MapStaticAssets();
+
+app.MapControllers();
 
 app.MapControllerRoute(
         name: "default",
