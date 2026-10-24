@@ -1,0 +1,26 @@
+# Build artifacts
+**/bin/
+**/obj/
+
+# Version control and IDE files
+**/.git/
+**/.gitignore
+**/.idea/
+**/.vs/
+**/*.user
+**/*.suo
+
+# Secrets and environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local data and logs
+**/*.log
+**/Logs/
+
+# Not required inside the image
+README.md
+docs/
+tgbot/
+backend/tests/
