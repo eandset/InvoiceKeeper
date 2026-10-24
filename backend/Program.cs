@@ -45,6 +45,8 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<OverdueRecalculationService>();
+builder.Services.AddHostedService<OverdueRecalculationHostedService>();
 
 builder.Services.AddScoped<TelegramAuthService>();
 
@@ -143,3 +145,4 @@ app.Run();
 public partial class Program
 {
 }
+

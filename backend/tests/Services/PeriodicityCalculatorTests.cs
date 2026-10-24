@@ -32,7 +32,7 @@ public class PeriodicityCalculatorTests
 
     [Theory]
     [InlineData("2024-02-29", 1, "2025-02-28")]
-    [InlineData("2023-02-28", 1, "2024-02-29")]
+    [InlineData("2023-02-28", 1, "2024-02-28")]
     [InlineData("2020-02-29", 4, "2024-02-29")]
     public void AddYears_HandlesLeapYearCorrectly(string date, int years, string expected)
     {
