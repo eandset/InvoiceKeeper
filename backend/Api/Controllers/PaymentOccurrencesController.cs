@@ -59,9 +59,13 @@ public sealed class PaymentOccurrencesController : ControllerBase
     [ProducesResponseType<IReadOnlyList<ReminderOccurrenceDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<ReminderOccurrenceDto>>> GetReminders(
         [FromQuery] int withinDays = 3,
+        [FromQuery] long? telegramChatId = null,
         CancellationToken cancellationToken = default)
     {
-        var reminders = await _paymentService.GetRemindersAsync(withinDays, cancellationToken);
+        var reminders = telegramChatId.HasValue
+            ? await _paymentService.GetRemindersByTelegramChatIdAsync(telegramChatId.Value, withinDays, cancellationToken)
+            : await _paymentService.GetRemindersAsync(withinDays, cancellationToken);
+
         return Ok(reminders);
     }
 

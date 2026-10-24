@@ -46,6 +46,8 @@ builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PaymentService>();
 
+builder.Services.AddScoped<TelegramAuthService>();
+
 builder.Services.AddApiDocumentation();
 builder.Services.AddWebClientCors(builder.Configuration, builder.Environment);
 

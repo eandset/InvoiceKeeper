@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceKeeper.Application.Services;
 
-public sealed class PaymentService
+public sealed partial class PaymentService
 {
     private readonly AppDbContext _dbContext;
 

@@ -9,4 +9,6 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.User;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public long? TelegramId { get; set; }
+    public long? TelegramChatId { get; set; }
 }
