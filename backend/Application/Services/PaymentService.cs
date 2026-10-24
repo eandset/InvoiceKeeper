@@ -20,6 +20,7 @@ public sealed partial class PaymentService
 
     public async Task<IReadOnlyList<PaymentResponseDto>> GetActivePaymentsAsync(CancellationToken cancellationToken)
     {
+        var today = _clock.Today;
         var payments = await _dbContext.RecurringPayments
             .AsNoTracking()
             .Where(p => !p.IsDeleted)
@@ -27,7 +28,7 @@ public sealed partial class PaymentService
             .OrderBy(p => p.Title)
             .ToListAsync(cancellationToken);
 
-        return payments.Select(PaymentMapper.ToPaymentDto).ToList();
+        return payments.Select(p => PaymentMapper.ToPaymentDto(p, today)).ToList();
     }
 
     public async Task<IReadOnlyList<PaymentOccurrenceResponseDto>> GetAllOccurrencesAsync(
@@ -67,20 +68,15 @@ public sealed partial class PaymentService
             }
         }
 
-        return await query
+        var today = _clock.Today;
+        var occurrences = await query
             .OrderBy(o => o.DueDate)
             .ThenBy(o => o.RecurringPayment!.Title)
-            .Select(o => new PaymentOccurrenceResponseDto(
-                o.Id,
-                o.RecurringPaymentId,
-                o.RecurringPayment!.Title,
-                o.RecurringPayment.Amount,
-                o.RecurringPayment.Currency.ToString(),
-                o.DueDate,
-                o.Status.ToString(),
-                o.ActualPaymentDate,
-                o.Status == PaymentOccurrenceStatus.Overdue))
             .ToListAsync(cancellationToken);
+
+        return occurrences
+            .Select(o => PaymentMapper.ToOccurrenceDto(o, o.RecurringPayment!, today))
+            .ToList();
     }
 
     public async Task<PaymentOccurrenceResponseDto> GetOccurrenceByIdAsync(
@@ -90,21 +86,10 @@ public sealed partial class PaymentService
         var occurrence = await _dbContext.PaymentOccurrences
             .AsNoTracking()
             .Include(o => o.RecurringPayment)
-            .Where(o => o.Id == id && o.RecurringPayment != null && !o.RecurringPayment.IsDeleted)
-            .Select(o => new PaymentOccurrenceResponseDto(
-                o.Id,
-                o.RecurringPaymentId,
-                o.RecurringPayment!.Title,
-                o.RecurringPayment.Amount,
-                o.RecurringPayment.Currency.ToString(),
-                o.DueDate,
-                o.Status.ToString(),
-                o.ActualPaymentDate,
-                o.Status == PaymentOccurrenceStatus.Overdue))
-            .SingleOrDefaultAsync(cancellationToken)
+            .SingleOrDefaultAsync(o => o.Id == id && o.RecurringPayment != null && !o.RecurringPayment.IsDeleted, cancellationToken)
             ?? throw new NotFoundException($"Период оплаты {id} не найден.");
 
-        return occurrence;
+        return PaymentMapper.ToOccurrenceDto(occurrence, occurrence.RecurringPayment!, _clock.Today);
     }
 
     public async Task<PaymentResponseDto> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -115,7 +100,7 @@ public sealed partial class PaymentService
             .SingleOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken)
             ?? throw new NotFoundException($"Платёж {id} не найден.");
 
-        return PaymentMapper.ToPaymentDto(payment);
+        return PaymentMapper.ToPaymentDto(payment, _clock.Today);
     }
 
     public async Task<PaymentResponseDto> CreateAsync(
@@ -155,7 +140,7 @@ public sealed partial class PaymentService
         _dbContext.RecurringPayments.Add(payment);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return PaymentMapper.ToPaymentDto(payment);
+        return PaymentMapper.ToPaymentDto(payment, _clock.Today);
     }
 
     public async Task SoftDeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -194,7 +179,7 @@ public sealed partial class PaymentService
 
         if (previousStatus == status)
         {
-            return PaymentMapper.ToOccurrenceDto(occurrence, payment);
+            return PaymentMapper.ToOccurrenceDto(occurrence, payment, _clock.Today);
         }
 
         occurrence.Status = status;
@@ -215,7 +200,7 @@ public sealed partial class PaymentService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return PaymentMapper.ToOccurrenceDto(occurrence, payment);
+        return PaymentMapper.ToOccurrenceDto(occurrence, payment, _clock.Today);
     }
 
     private static void EnsureNextOccurrence(
@@ -268,7 +253,7 @@ public sealed partial class PaymentService
                 o.RecurringPayment.Amount,
                 o.RecurringPayment.Currency.ToString(),
                 o.DueDate,
-                (o.DueDate.Date - today).Days,
+                (o.DueDate.Date - today.Date).Days,
                 o.Status == PaymentOccurrenceStatus.Overdue))
             .ToList();
     }

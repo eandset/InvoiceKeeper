@@ -7,7 +7,7 @@ namespace InvoiceKeeper.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/analytics")]
-[Authorize(Policy = "UserOrAdmin")]
+[Authorize(Policy = "UserOrAdminOrService")]
 public sealed class AnalyticsController : ControllerBase
 {
     private readonly PaymentService _paymentService;

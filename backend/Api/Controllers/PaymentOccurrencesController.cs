@@ -18,7 +18,7 @@ public sealed class PaymentOccurrencesController : ControllerBase
 
     /// <summary>Список всех периодов оплаты, включая просроченные.</summary>
     [HttpGet]
-    [Authorize(Policy = "UserOrAdmin")]
+    [Authorize(Policy = "UserOrAdminOrService")]
     [ProducesResponseType<IReadOnlyList<PaymentOccurrenceResponseDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PaymentOccurrenceResponseDto>>> GetAll(
         [FromQuery] bool? isPaid,

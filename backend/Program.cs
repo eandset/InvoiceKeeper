@@ -94,6 +94,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("UserOrAdmin", policy => policy.RequireRole("Admin", "User"));
     options.AddPolicy("ServiceOrAdmin", policy => policy.RequireRole("Admin", ServiceTokenAuthenticationHandler.ServiceRole));
+    options.AddPolicy("UserOrAdminOrService", policy => policy.RequireRole("Admin", "User", ServiceTokenAuthenticationHandler.ServiceRole));
 });
 
 var app = builder.Build();

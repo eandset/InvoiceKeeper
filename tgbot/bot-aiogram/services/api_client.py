@@ -17,15 +17,12 @@ class ApiError(Exception):
 
 
 class ApiClient:
-    """Клиент к /api/v1. Автоматически получает JWT по логину/паролю,
-    если не задан сервисный BOT_SERVICE_TOKEN."""
+    """Клиент к /api/v1 с поддержкой сервисного токена."""
 
-    def __init__(self, base_url: str, token: str = "") -> None:
+    def __init__(self, base_url: str, service_token: str = "") -> None:
         self._base = base_url.rstrip("/")
-        self._token = token or None
+        self._service_token = service_token or ""
         self._session: aiohttp.ClientSession | None = None
-
-    # ---------- внутреннее ----------
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
@@ -35,25 +32,19 @@ class ApiClient:
 
     @property
     def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._token}"} if self._token else {}
-
-    async def login(self, username: str, password: str) -> str:
-        """POST /auth/login -> JWT"""
-        session = await self._get_session()
-        async with session.post(
-            f"{self._base}/auth/login",
-            json={"username": username, "password": password},
-        ) as resp:
-            if resp.status != 200:
-                raise ApiError(resp.status, await resp.text())
-            data = await resp.json()
-            self._token = data["token"]
-            logger.info("API login ok as %s", data.get("user", {}).get("username"))
-            return self._token
+        headers: dict[str, str] = {}
+        if self._service_token:
+            headers["X-Service-Token"] = self._service_token
+        return headers
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         session = await self._get_session()
-        async with session.request(method, f"{self._base}{path}", headers=self._headers, **kwargs) as resp:
+        async with session.request(
+            method,
+            f"{self._base}{path}",
+            headers=self._headers,
+            **kwargs,
+        ) as resp:
             if resp.status == 401:
                 raise ApiError(401, "unauthorized")
             if resp.status >= 400:
@@ -66,24 +57,37 @@ class ApiClient:
         if self._session and not self._session.closed:
             await self._session.close()
 
-    # ---------- API ----------
+    # ---------- Сервисные эндпоинты бота ----------
 
-    async def get_occurrences(self, status: str | None = None) -> list[dict]:
-        path = "/payment-occurrences"
-        if status:
-            path += f"?status={status}"
-        return await self._request("GET", path) or []
+    async def get_reminders(self, within_days: int = 3) -> list[dict]:
+        """GET /api/v1/payment-occurrences/reminders?withinDays=..."""
+        return await self._request("GET", f"/payment-occurrences/reminders?withinDays={within_days}") or []
 
-    async def get_reminders(self, lead_days: int = 3) -> list[dict]:
-        """Периоды, требующие напоминания (роль Bot/Admin)."""
-        return await self._request("GET", f"/occurrences/reminders?leadDays={lead_days}") or []
+    async def mark_reminder_sent(self, occurrence_id: str) -> None:
+        """PATCH /api/v1/payment-occurrences/{id}/reminder-sent"""
+        await self._request("PATCH", f"/payment-occurrences/{occurrence_id}/reminder-sent")
 
-    async def mark_reminder_sent(self, occurrence_id: str, overdue: bool = False) -> None:
-        q = "true" if overdue else "false"
-        await self._request("PATCH", f"/payment-occurrences/{occurrence_id}/reminder-sent?overdue={q}")
+    async def get_payment_occurrences(self, *, is_paid: bool | None = None, is_overdue: bool | None = None) -> list[dict]:
+        """GET /api/v1/payment-occurrences с фильтрацией."""
+        params: list[str] = []
+        if is_paid is not None:
+            params.append(f"isPaid={str(is_paid).lower()}")
+        if is_overdue is not None:
+            params.append(f"isOverdue={str(is_overdue).lower()}")
+        query = "&".join(params)
+        return await self._request("GET", f"/payment-occurrences?{query}" if query else "/payment-occurrences") or []
 
-    async def get_summary(self) -> dict:
+    async def get_recurring_payments(self) -> list[dict]:
+        """GET /api/v1/recurring-payments"""
+        return await self._request("GET", "/recurring-payments") or []
+
+    async def get_payments_summary(self) -> dict:
+        """GET /api/v1/payments/summary"""
         return await self._request("GET", "/payments/summary") or {}
+
+    async def get_overdue(self) -> list[dict]:
+        """GET /api/v1/analytics/overdue"""
+        return await self._request("GET", "/analytics/overdue") or []
 
     async def health(self) -> bool:
         try:
