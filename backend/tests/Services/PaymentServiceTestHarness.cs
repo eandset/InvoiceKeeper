@@ -22,25 +22,7 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
 
     public static async Task<PostgresTestDatabase> CreateAsync()
     {
-        var password = TestEnvironment.GetRequired("POSTGRES_PASSWORD");
-
-        var host = TestEnvironment.Get("POSTGRES_HOST") ?? "localhost";
-        var port = TestEnvironment.Get("POSTGRES_PORT") ?? "5432";
-        var username = TestEnvironment.Get("POSTGRES_USER") ?? "postgres";
-        var databaseName = $"invoice_keeper_test_{Guid.NewGuid():N}";
-
-        var adminConnectionString =
-            $"Host={host};Port={port};Database=postgres;Username={username};Password={password}";
-        var databaseConnectionString =
-            $"Host={host};Port={port};Database={databaseName};Username={username};Password={password}";
-
-        await using (var admin = new Npgsql.NpgsqlConnection(adminConnectionString))
-        {
-            await admin.OpenAsync();
-            await using var create = admin.CreateCommand();
-            create.CommandText = $"CREATE DATABASE \"{databaseName}\"";
-            await create.ExecuteNonQueryAsync();
-        }
+        var (databaseName, databaseConnectionString) = await PostgresTestServer.CreateDatabaseAsync();
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(databaseConnectionString)
@@ -56,17 +38,7 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
         await Context.Database.CloseConnectionAsync();
         await Context.DisposeAsync();
 
-        var password = TestEnvironment.GetRequired("POSTGRES_PASSWORD");
-        var host = TestEnvironment.Get("POSTGRES_HOST") ?? "localhost";
-        var port = TestEnvironment.Get("POSTGRES_PORT") ?? "5432";
-        var username = TestEnvironment.Get("POSTGRES_USER") ?? "postgres";
-
-        await using var admin = new Npgsql.NpgsqlConnection(
-            $"Host={host};Port={port};Database=postgres;Username={username};Password={password}");
-        await admin.OpenAsync();
-        await using var drop = admin.CreateCommand();
-        drop.CommandText = $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)";
-        await drop.ExecuteNonQueryAsync();
+        await PostgresTestServer.DropDatabaseAsync(_databaseName);
     }
 }
 

@@ -134,3 +134,8 @@ app.MapControllerRoute(
 
 
 app.Run();
+
+/// <summary>Точка входа доступна интеграционным тестам через WebApplicationFactory.</summary>
+public partial class Program
+{
+}
