@@ -6,18 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace InvoiceKeeper.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/analytics")]
+[Route("api/v1/payments")]
 [Authorize(Policy = "UserOrAdmin")]
-public sealed class AnalyticsController : ControllerBase
+public sealed class PaymentsSummaryController : ControllerBase
 {
     private readonly PaymentService _paymentService;
 
-    public AnalyticsController(PaymentService paymentService)
+    public PaymentsSummaryController(PaymentService paymentService)
     {
         _paymentService = paymentService;
     }
 
-    /// <summary>Сводка по неоплаченным счетам в разрезе валют и количеству периодов.</summary>
+    /// <summary>Итоговые суммы неоплаченных платежей по валютам.</summary>
     [HttpGet("summary")]
     [ProducesResponseType<PaymentSummaryDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PaymentSummaryDto>> GetSummary(CancellationToken cancellationToken)

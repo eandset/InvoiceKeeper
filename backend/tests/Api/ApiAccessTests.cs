@@ -19,16 +19,16 @@ public sealed class ApiAccessTests
     // ---------- Без аутентификации ----------
 
     [Theory]
-    [InlineData("GET", "/api/v1/payments")]
-    [InlineData("POST", "/api/v1/payments")]
-    [InlineData("GET", "/api/v1/payments/6a1f3c1e-0000-0000-0000-000000000000")]
-    [InlineData("DELETE", "/api/v1/payments/6a1f3c1e-0000-0000-0000-000000000000")]
-    [InlineData("GET", "/api/v1/analytics/summary")]
+    [InlineData("GET", "/api/v1/recurring-payments")]
+    [InlineData("POST", "/api/v1/recurring-payments")]
+    [InlineData("GET", "/api/v1/recurring-payments/6a1f3c1e-0000-0000-0000-000000000000")]
+    [InlineData("DELETE", "/api/v1/recurring-payments/6a1f3c1e-0000-0000-0000-000000000000")]
+    [InlineData("GET", "/api/v1/payments/summary")]
     [InlineData("GET", "/api/v1/users")]
     [InlineData("POST", "/api/v1/users")]
-    [InlineData("GET", "/api/v1/occurrences/reminders")]
-    [InlineData("PATCH", "/api/v1/occurrences/6a1f3c1e-0000-0000-0000-000000000000/status")]
-    [InlineData("PATCH", "/api/v1/occurrences/6a1f3c1e-0000-0000-0000-000000000000/reminder-sent")]
+    [InlineData("GET", "/api/v1/payment-occurrences/reminders")]
+    [InlineData("PATCH", "/api/v1/payment-occurrences/6a1f3c1e-0000-0000-0000-000000000000")]
+    [InlineData("PATCH", "/api/v1/payment-occurrences/6a1f3c1e-0000-0000-0000-000000000000/reminder-sent")]
     public async Task ProtectedEndpoints_Return401_WithoutToken(string method, string url)
     {
         var response = await SendAsync(new HttpMethod(method), url);
@@ -39,7 +39,7 @@ public sealed class ApiAccessTests
     [Fact]
     public async Task Payments_Return401_ForMalformedJwt()
     {
-        var response = await SendAsync(HttpMethod.Get, "/api/v1/payments", token: "not-a-jwt");
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", token: "not-a-jwt");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -49,7 +49,7 @@ public sealed class ApiAccessTests
     {
         var response = await SendAsync(
             HttpMethod.Get,
-            "/api/v1/occurrences/reminders",
+            "/api/v1/payment-occurrences/reminders",
             serviceToken: "wrong-token");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -72,8 +72,8 @@ public sealed class ApiAccessTests
     {
         var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
 
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Get, "/api/v1/payments", token)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Get, "/api/v1/analytics/summary", token)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", token)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", token)).StatusCode);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public sealed class ApiAccessTests
 
         var create = await SendAsync(
             HttpMethod.Post,
-            "/api/v1/payments",
+            "/api/v1/recurring-payments",
             token,
             new CreatePaymentDto("Запрещено", 10m, "RUB", DateTime.UtcNow.Date));
-        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/payments/{payment.Id}", token);
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/recurring-payments/{payment.Id}", token);
 
         Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
@@ -117,7 +117,7 @@ public sealed class ApiAccessTests
 
         var response = await SendAsync(
             HttpMethod.Patch,
-            $"/api/v1/occurrences/{payment.NextOccurrence!.Id}/status",
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
             token,
             new UpdatePaymentStatusDto(true, null));
 
@@ -132,10 +132,10 @@ public sealed class ApiAccessTests
         var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
         var payment = await CreatePaymentAsync();
 
-        var reminders = await SendAsync(HttpMethod.Get, "/api/v1/occurrences/reminders", token);
+        var reminders = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences/reminders", token);
         var markSent = await SendAsync(
             HttpMethod.Patch,
-            $"/api/v1/occurrences/{payment.NextOccurrence!.Id}/reminder-sent",
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}/reminder-sent",
             token);
 
         Assert.Equal(HttpStatusCode.Forbidden, reminders.StatusCode);
@@ -150,7 +150,7 @@ public sealed class ApiAccessTests
 
         var response = await SendAsync(
             HttpMethod.Get,
-            "/api/v1/occurrences/reminders",
+            "/api/v1/payment-occurrences/reminders",
             token,
             serviceToken: ApiFactory.BotToken);
 
@@ -166,7 +166,7 @@ public sealed class ApiAccessTests
 
         var reminders = await SendAsync(
             HttpMethod.Get,
-            "/api/v1/occurrences/reminders",
+            "/api/v1/payment-occurrences/reminders",
             serviceToken: ApiFactory.BotToken);
 
         Assert.Equal(HttpStatusCode.OK, reminders.StatusCode);
@@ -175,13 +175,13 @@ public sealed class ApiAccessTests
 
         var markSent = await SendAsync(
             HttpMethod.Patch,
-            $"/api/v1/occurrences/{payment.NextOccurrence!.Id}/reminder-sent",
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}/reminder-sent",
             serviceToken: ApiFactory.BotToken);
         Assert.Equal(HttpStatusCode.NoContent, markSent.StatusCode);
 
         var after = await SendAsync(
             HttpMethod.Get,
-            "/api/v1/occurrences/reminders",
+            "/api/v1/payment-occurrences/reminders",
             serviceToken: ApiFactory.BotToken);
         var afterList = await after.Content.ReadFromJsonAsync<List<ReminderOccurrenceDto>>();
         Assert.DoesNotContain(afterList!, r => r.Id == payment.NextOccurrence!.Id);
@@ -192,11 +192,11 @@ public sealed class ApiAccessTests
     {
         var payment = await CreatePaymentAsync();
 
-        var payments = await SendAsync(HttpMethod.Get, "/api/v1/payments", serviceToken: ApiFactory.BotToken);
-        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/analytics/summary", serviceToken: ApiFactory.BotToken);
+        var payments = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", serviceToken: ApiFactory.BotToken);
+        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", serviceToken: ApiFactory.BotToken);
         var status = await SendAsync(
             HttpMethod.Patch,
-            $"/api/v1/occurrences/{payment.NextOccurrence!.Id}/status",
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
             body: new UpdatePaymentStatusDto(true, null),
             serviceToken: ApiFactory.BotToken);
         var users = await SendAsync(HttpMethod.Get, "/api/v1/users", serviceToken: ApiFactory.BotToken);
@@ -215,9 +215,9 @@ public sealed class ApiAccessTests
         var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
 
         var users = await SendAsync(HttpMethod.Get, "/api/v1/users", token);
-        var payments = await SendAsync(HttpMethod.Get, "/api/v1/payments", token);
-        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/analytics/summary", token);
-        var reminders = await SendAsync(HttpMethod.Get, "/api/v1/occurrences/reminders", token);
+        var payments = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", token);
+        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", token);
+        var reminders = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences/reminders", token);
         var created = await SendAsync(
             HttpMethod.Post,
             "/api/v1/users",
@@ -238,7 +238,7 @@ public sealed class ApiAccessTests
 
         var create = await SendAsync(
             HttpMethod.Post,
-            "/api/v1/payments",
+            "/api/v1/recurring-payments",
             token,
             new CreatePaymentDto("Админский платёж", 100m, "RUB", DateTime.UtcNow.Date));
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
@@ -246,10 +246,10 @@ public sealed class ApiAccessTests
         var created = await create.Content.ReadFromJsonAsync<PaymentResponseDto>();
         Assert.NotNull(created!.NextOccurrence);
 
-        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/payments/{created.Id}", token);
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/recurring-payments/{created.Id}", token);
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
 
-        var readAfterDelete = await SendAsync(HttpMethod.Get, $"/api/v1/payments/{created.Id}", token);
+        var readAfterDelete = await SendAsync(HttpMethod.Get, $"/api/v1/recurring-payments/{created.Id}", token);
         Assert.Equal(HttpStatusCode.NotFound, readAfterDelete.StatusCode);
     }
 
@@ -260,7 +260,7 @@ public sealed class ApiAccessTests
 
         var response = await SendAsync(
             HttpMethod.Patch,
-            $"/api/v1/occurrences/{Guid.NewGuid()}/status",
+            $"/api/v1/payment-occurrences/{Guid.NewGuid()}",
             token,
             new UpdatePaymentStatusDto(true, null));
 
@@ -274,7 +274,7 @@ public sealed class ApiAccessTests
 
         var response = await SendAsync(
             HttpMethod.Post,
-            "/api/v1/payments",
+            "/api/v1/recurring-payments",
             token,
             new CreatePaymentDto("Валюта", 10m, "GBP", DateTime.UtcNow.Date));
 
@@ -286,7 +286,7 @@ public sealed class ApiAccessTests
         var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
         var response = await SendAsync(
             HttpMethod.Post,
-            "/api/v1/payments",
+            "/api/v1/recurring-payments",
             token,
             new CreatePaymentDto(
                 $"Платёж {Guid.NewGuid():N}"[..20],

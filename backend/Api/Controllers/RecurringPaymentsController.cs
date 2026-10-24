@@ -5,14 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InvoiceKeeper.Api.Controllers;
 
-[ApiController]
-[Route("api/v1/payments")]
+[Route("api/v1/recurring-payments")]
 [Authorize(Policy = "UserOrAdmin")]
-public sealed class PaymentsController : ControllerBase
+[ApiController]
+public sealed class RecurringPaymentsController : ControllerBase
 {
     private readonly PaymentService _paymentService;
 
-    public PaymentsController(PaymentService paymentService)
+    public RecurringPaymentsController(PaymentService paymentService)
     {
         _paymentService = paymentService;
     }
@@ -60,4 +60,3 @@ public sealed class PaymentsController : ControllerBase
         return NoContent();
     }
 }
-

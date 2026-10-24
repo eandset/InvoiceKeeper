@@ -5,24 +5,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InvoiceKeeper.Api.Controllers;
 
+[Route("api/v1/payment-occurrences")]
 [ApiController]
-[Route("api/v1/occurrences")]
-public sealed class OccurrencesController : ControllerBase
+public sealed class PaymentOccurrencesController : ControllerBase
 {
     private readonly PaymentService _paymentService;
 
-    public OccurrencesController(PaymentService paymentService)
+    public PaymentOccurrencesController(PaymentService paymentService)
     {
         _paymentService = paymentService;
     }
 
     /// <summary>Обновление статуса оплаты периода (пользователь или администратор).</summary>
-    [HttpPatch("{id:guid}/status")]
+    [HttpPatch("{id:guid}")]
     [Authorize(Policy = "UserOrAdmin")]
     [ProducesResponseType<PaymentOccurrenceResponseDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PaymentOccurrenceResponseDto>> UpdateStatus(
+    public async Task<ActionResult<PaymentOccurrenceResponseDto>> Update(
         Guid id,
         [FromBody] UpdatePaymentStatusDto request,
         CancellationToken cancellationToken)
@@ -54,4 +54,3 @@ public sealed class OccurrencesController : ControllerBase
         return NoContent();
     }
 }
-
