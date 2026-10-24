@@ -20,5 +20,21 @@ public static class DatabaseSeedExtensions
             logger.LogWarning(exception, "Не удалось инициализировать администратора при старте.");
         }
     }
+
+    public static async Task SeedDemoDataAsync(this WebApplication app)
+    {
+        try
+        {
+            await using var scope = app.Services.CreateAsyncScope();
+            var seeder = scope.ServiceProvider.GetRequiredService<DemoDataSeeder>();
+            await seeder.SeedAsync();
+        }
+        catch (Exception exception)
+        {
+            var logger = app.Services.GetRequiredService<ILoggerFactory>()
+                .CreateLogger(nameof(DatabaseSeedExtensions));
+            logger.LogWarning(exception, "Не удалось инициализировать демо-данные при старте.");
+        }
+    }
 }
 

@@ -45,6 +45,7 @@ builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<AdminSeeder>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<DemoDataSeeder>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<OverdueRecalculationService>();
 builder.Services.AddHostedService<OverdueRecalculationHostedService>();
@@ -108,6 +109,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 if (app.Configuration.GetValue("Database:SeedOnStartup", true))
 {
     await app.SeedAdminAsync();
+    await app.SeedDemoDataAsync();
 }
 
 // Configure the HTTP request pipeline.
