@@ -19,7 +19,8 @@ public record PaymentOccurrenceResponseDto(
     DateTime DueDate,
     string Status,
     DateTime? ActualPaymentDate,
-    bool IsOverdue);
+    bool IsOverdue,
+    int DaysUntilDue);
 
 public record PaymentResponseDto(
     Guid Id,
@@ -54,4 +55,3 @@ public record PaymentSummaryDto(
     decimal TotalEur,
     int PendingCount,
     int OverdueCount);
-

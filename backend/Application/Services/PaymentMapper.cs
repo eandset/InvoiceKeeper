@@ -1,15 +1,19 @@
 using InvoiceKeeper.Application.DTOs;
+using InvoiceKeeper.Application.Common;
 using InvoiceKeeper.Domain.Entities;
 using InvoiceKeeper.Domain.Enums;
 
 namespace InvoiceKeeper.Application.Services;
 
-internal static class PaymentMapper
+internal class PaymentMapper
 {
     public static PaymentOccurrenceResponseDto ToOccurrenceDto(
         PaymentOccurrence occurrence,
-        RecurringPayment payment) =>
-        new(
+        RecurringPayment payment,
+        DateTime today)
+    {
+        var daysUntilDue = (occurrence.DueDate.Date - today.Date).Days;
+        return new PaymentOccurrenceResponseDto(
             occurrence.Id,
             occurrence.RecurringPaymentId,
             payment.Title,
@@ -18,9 +22,11 @@ internal static class PaymentMapper
             occurrence.DueDate,
             occurrence.Status.ToString(),
             occurrence.ActualPaymentDate,
-            occurrence.Status == PaymentOccurrenceStatus.Overdue);
+            occurrence.Status == PaymentOccurrenceStatus.Overdue,
+            daysUntilDue);
+    }
 
-    public static PaymentResponseDto ToPaymentDto(RecurringPayment payment)
+    public static PaymentResponseDto ToPaymentDto(RecurringPayment payment, DateTime today)
     {
         var nextOccurrence = payment.Occurrences
             .Where(o => o.Status != PaymentOccurrenceStatus.Paid)
@@ -36,9 +42,8 @@ internal static class PaymentMapper
             payment.NextPaymentDate,
             payment.IsDeleted,
             payment.CreatedAt,
-            nextOccurrence is null ? null : ToOccurrenceDto(nextOccurrence, payment),
+            nextOccurrence is null ? null : ToOccurrenceDto(nextOccurrence, payment, today),
             payment.Occurrences.Count(o => o.Status == PaymentOccurrenceStatus.Paid),
             payment.Occurrences.Count(o => o.Status != PaymentOccurrenceStatus.Paid));
     }
 }
-

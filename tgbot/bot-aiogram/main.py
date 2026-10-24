@@ -10,10 +10,11 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from config import settings
 from handlers import commands, errors
-from scheduler.jobs import send_payment_reminders
+from scheduler.jobs import check_new_payments, send_payment_reminders
 
 
 async def main() -> None:
@@ -36,9 +37,16 @@ async def main() -> None:
         id="daily_payment_reminders",
         replace_existing=True,
     )
+    scheduler.add_job(
+        check_new_payments,
+        IntervalTrigger(minutes=3),
+        args=[bot],
+        id="check_new_payments",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info(
-        "Планировщик запущен: ежедневно в %02d:%02d, lead=%d дн.",
+        "Планировщик запущен: ежедневно в %02d:%02d, lead=%d дн.; проверка новых платежей каждые 3 мин.",
         settings.cron_schedule_hour, settings.cron_schedule_minute, settings.reminder_lead_days,
     )
 

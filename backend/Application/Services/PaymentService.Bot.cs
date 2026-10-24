@@ -41,7 +41,7 @@ public partial class PaymentService
                 o.RecurringPayment.Amount,
                 o.RecurringPayment.Currency.ToString(),
                 o.DueDate,
-                (o.DueDate.Date - today).Days,
+                (o.DueDate.Date - today.Date).Days,
                 o.Status == PaymentOccurrenceStatus.Overdue))
             .ToList();
     }

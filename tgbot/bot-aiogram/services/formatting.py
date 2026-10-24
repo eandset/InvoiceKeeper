@@ -66,6 +66,20 @@ def payment_line(item: dict) -> str:
     return f"<b>{title}</b> - {amount}\n   следующий: {date}"
 
 
+def new_payment_message(item: dict) -> str:
+    """Сообщение о новом регулярном платеже."""
+    title = escape(str(item.get("title", "")))
+    amount = _fmt_amount(item.get("amount", 0), item.get("currency", ""))
+    next_date = item.get("nextPaymentDate", "")
+    date = str(next_date)[:10] if next_date else "-"
+    return (
+        " <b>Добавлен новый платёж</b>\n"
+        f"Платеж: <b>{title}</b>\n"
+        f"Сумма: <b>{amount}</b>\n"
+        f"Следующий платёж: {date}"
+    )
+
+
 def summary_message(summary: dict) -> str:
     """Форматирует ответ /payments/summary для Telegram."""
     lines = ["<b>Итоги по валютам</b> (без конвертации)", ""]
