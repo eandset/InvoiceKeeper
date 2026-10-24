@@ -50,6 +50,11 @@ public sealed class AuthService
             throw new BadRequestException("Роль должна быть 'Admin' или 'User'.");
         }
 
+        if (role != UserRole.User)
+        {
+            throw new ForbiddenException("Создавать администраторов запрещено.");
+        }
+
         var normalizedUsername = username.ToLowerInvariant();
         var exists = await _dbContext.Users
             .AnyAsync(u => u.Username.ToLower() == normalizedUsername, cancellationToken);
@@ -82,6 +87,7 @@ public sealed class AuthService
     public async Task<UserResponseDto> UpdateUserAsync(
         Guid id,
         UpdateUserDto request,
+        Guid currentUserId,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var role) ||
@@ -93,7 +99,15 @@ public sealed class AuthService
         var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
             ?? throw new NotFoundException($"Пользователь {id} не найден.");
 
-        user.Role = role;
+        if (user.Role == UserRole.Admin && user.Id != currentUserId)
+        {
+            throw new ForbiddenException("Изменение другого администратора запрещено.");
+        }
+
+        if (role != user.Role)
+        {
+            throw new ForbiddenException("Изменять роль пользователя запрещено.");
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Password) && request.Password != "(unchanged)")
         {
@@ -109,6 +123,11 @@ public sealed class AuthService
     {
         var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
             ?? throw new NotFoundException($"Пользователь {id} не найден.");
+
+        if (user.Role == UserRole.Admin)
+        {
+            throw new ForbiddenException("Удаление администратора запрещено.");
+        }
 
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync(cancellationToken);

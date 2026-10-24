@@ -30,6 +30,9 @@ public sealed class BadRequestException(string message)
 public sealed class UnauthorizedException(string message)
     : ApiException(StatusCodes.Status401Unauthorized, message);
 
+public sealed class ForbiddenException(string message)
+    : ApiException(StatusCodes.Status403Forbidden, message);
+
 public sealed class NotFoundException(string message)
     : ApiException(StatusCodes.Status404NotFound, message);
 

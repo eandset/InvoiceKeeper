@@ -45,7 +45,7 @@ public sealed class UsersController : ControllerBase
         [FromBody] UpdateUserDto request,
         CancellationToken cancellationToken)
     {
-        var user = await _authService.UpdateUserAsync(id, request, cancellationToken);
+        var user = await _authService.UpdateUserAsync(id, request, User.GetUserId(), cancellationToken);
         return Ok(user);
     }
 

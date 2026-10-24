@@ -18,6 +18,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string AdminUsername = "api-admin";
     public const string AdminPassword = "Api-Admin-Passw0rd!";
+    public const string SecondAdminUsername = "api-admin-2";
+    public const string SecondAdminPassword = "Api-Admin-2-Passw0rd!";
     public const string UserUsername = "api-user";
     public const string UserPassword = "Api-User-Passw0rd!";
     public const string BotToken = "test-bot-token-for-integration-tests";
@@ -62,6 +64,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             {
                 Username = AdminUsername,
                 PasswordHash = hasher.Hash(AdminPassword),
+                Role = UserRole.Admin
+            },
+            new User
+            {
+                Username = SecondAdminUsername,
+                PasswordHash = hasher.Hash(SecondAdminPassword),
                 Role = UserRole.Admin
             },
             new User

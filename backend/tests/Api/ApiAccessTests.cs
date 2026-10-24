@@ -160,7 +160,7 @@ public sealed class ApiAccessTests
             HttpMethod.Post,
             "/api/v1/users",
             token,
-            new CreateUserDto("intruder", "Intruder-Passw0rd!", "Admin"));
+            new CreateUserDto("intruder", "Intruder-Passw0rd!", "User"));
         var update = await SendAsync(
             HttpMethod.Patch,
             $"/api/v1/users/{Guid.NewGuid()}",
@@ -358,10 +358,10 @@ public sealed class ApiAccessTests
             HttpMethod.Patch,
             $"/api/v1/users/{user!.Id}",
             token,
-            new UpdateUserDto("(unchanged)", "Admin"));
+            new UpdateUserDto("Changed-Passw0rd!", "User"));
         Assert.Equal(HttpStatusCode.OK, update.StatusCode);
         var updated = await update.Content.ReadFromJsonAsync<UserResponseDto>();
-        Assert.Equal("Admin", updated!.Role);
+        Assert.Equal("User", updated!.Role);
         Assert.Equal(username, updated.Username);
 
         var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/users/{user.Id}", token);
@@ -369,6 +369,59 @@ public sealed class ApiAccessTests
 
         var afterDelete = await SendAsync(HttpMethod.Get, $"/api/v1/users/{user.Id}", token);
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_CannotTouchAnotherAdmin()
+    {
+        var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
+        var otherAdminId = await GetUserIdAsync(ApiFactory.SecondAdminUsername);
+
+        var update = await SendAsync(
+            HttpMethod.Patch,
+            $"/api/v1/users/{otherAdminId}",
+            token,
+            new UpdateUserDto("Hijacked-Passw0rd!", "User"));
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/users/{otherAdminId}", token);
+
+        Assert.Equal(HttpStatusCode.Forbidden, update.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_CanChangeOwnPassword()
+    {
+        var token = await LoginAsync(ApiFactory.SecondAdminUsername, ApiFactory.SecondAdminPassword);
+        var selfId = await GetUserIdAsync(ApiFactory.SecondAdminUsername);
+
+        var update = await SendAsync(
+            HttpMethod.Patch,
+            $"/api/v1/users/{selfId}",
+            token,
+            new UpdateUserDto("(unchanged)", "Admin"));
+
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_CannotCreateOrPromoteAdmin()
+    {
+        var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
+        var userId = await GetUserIdAsync(ApiFactory.UserUsername);
+
+        var createAdmin = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/users",
+            token,
+            new CreateUserDto($"new-admin-{Guid.NewGuid():N}"[..24], "New-Admin-Passw0rd!", "Admin"));
+        var promote = await SendAsync(
+            HttpMethod.Patch,
+            $"/api/v1/users/{userId}",
+            token,
+            new UpdateUserDto("(unchanged)", "Admin"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, createAdmin.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, promote.StatusCode);
     }
 
     [Fact]
@@ -439,6 +492,16 @@ public sealed class ApiAccessTests
         response.EnsureSuccessStatusCode();
         var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
         return auth!.Token;
+    }
+
+    private async Task<Guid> GetUserIdAsync(string username)
+    {
+        var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/users", token);
+        response.EnsureSuccessStatusCode();
+
+        var users = await response.Content.ReadFromJsonAsync<List<UserResponseDto>>();
+        return users!.Single(u => u.Username == username).Id;
     }
 
     private Task<HttpResponseMessage> SendAsync(
