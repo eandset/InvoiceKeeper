@@ -42,9 +42,6 @@ async def main() -> None:
         settings.cron_schedule_hour, settings.cron_schedule_minute, settings.reminder_lead_days,
     )
 
-    # Первый прогон сразу при старте (на случай, если бот был выключен в 09:00)
-    await send_payment_reminders(bot)
-
     logger.info("Бот запущен (long polling)")
     try:
         await dp.start_polling(bot)

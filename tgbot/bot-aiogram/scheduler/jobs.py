@@ -21,9 +21,6 @@ async def send_payment_reminders(bot: Bot) -> int:
     api = ApiClient(settings.api_base, settings.bot_service_token)
     sent = 0
     try:
-        if not settings.bot_service_token:
-            await api.login(settings.admin_username, settings.admin_password)
-
         items = await api.get_reminders(within_days=settings.reminder_lead_days)
         if not items:
             logger.info("Напоминаний нет")
@@ -37,7 +34,7 @@ async def send_payment_reminders(bot: Bot) -> int:
                     text=reminder_message(item),
                     parse_mode="HTML",
                 )
-                await api.mark_reminder_sent(str(item["id"]), overdue=bool(item.get("isOverdue")))
+                await api.mark_reminder_sent(str(item["id"]))
                 sent += 1
             except ApiError as e:
                 logger.warning("Не удалось отметить напоминание %s: %s", item.get("id"), e)
