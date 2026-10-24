@@ -17,7 +17,7 @@ class ApiError(Exception):
 
 
 class ApiClient:
-    """Клиент к сервисным эндпоинтам бэкенда по X-Service-Token."""
+    """Клиент к /api/v1 с поддержкой сервисного токена."""
 
     def __init__(self, base_url: str, service_token: str = "") -> None:
         self._base = base_url.rstrip("/")
@@ -66,6 +66,28 @@ class ApiClient:
     async def mark_reminder_sent(self, occurrence_id: str) -> None:
         """PATCH /api/v1/payment-occurrences/{id}/reminder-sent"""
         await self._request("PATCH", f"/payment-occurrences/{occurrence_id}/reminder-sent")
+
+    async def get_payment_occurrences(self, *, is_paid: bool | None = None, is_overdue: bool | None = None) -> list[dict]:
+        """GET /api/v1/payment-occurrences с фильтрацией."""
+        params: list[str] = []
+        if is_paid is not None:
+            params.append(f"isPaid={str(is_paid).lower()}")
+        if is_overdue is not None:
+            params.append(f"isOverdue={str(is_overdue).lower()}")
+        query = "&".join(params)
+        return await self._request("GET", f"/payment-occurrences?{query}" if query else "/payment-occurrences") or []
+
+    async def get_recurring_payments(self) -> list[dict]:
+        """GET /api/v1/recurring-payments"""
+        return await self._request("GET", "/recurring-payments") or []
+
+    async def get_payments_summary(self) -> dict:
+        """GET /api/v1/payments/summary"""
+        return await self._request("GET", "/payments/summary") or {}
+
+    async def get_overdue(self) -> list[dict]:
+        """GET /api/v1/analytics/overdue"""
+        return await self._request("GET", "/analytics/overdue") or []
 
     async def health(self) -> bool:
         try:
