@@ -14,7 +14,7 @@ public partial class PaymentService
         CancellationToken cancellationToken)
     {
         withinDays = Math.Clamp(withinDays, 0, 30);
-        var today = DateTime.UtcNow.Date;
+        var today = _clock.Today;
         var threshold = today.AddDays(withinDays);
 
         var user = await _dbContext.Users

@@ -2,6 +2,7 @@ using InvoiceKeeper.Api.Configuration;
 using InvoiceKeeper.Api.OpenApi;
 using InvoiceKeeper.Api.Middleware;
 using InvoiceKeeper.Application.Services;
+using InvoiceKeeper.Application.Common;
 using InvoiceKeeper.Infrastructure.Configuration;
 using InvoiceKeeper.Infrastructure.Data;
 using InvoiceKeeper.Infrastructure.Data.Seed;
@@ -49,6 +50,8 @@ builder.Services.AddScoped<OverdueRecalculationService>();
 builder.Services.AddHostedService<OverdueRecalculationHostedService>();
 
 builder.Services.AddScoped<TelegramAuthService>();
+
+builder.Services.AddSingleton<IAppClock, AppClock>();
 
 builder.Services.AddApiDocumentation();
 builder.Services.AddWebClientCors(builder.Configuration, builder.Environment);

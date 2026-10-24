@@ -10,10 +10,12 @@ namespace InvoiceKeeper.Application.Services;
 public sealed partial class PaymentService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IAppClock _clock;
 
-    public PaymentService(AppDbContext dbContext)
+    public PaymentService(AppDbContext dbContext, IAppClock? clock = null)
     {
         _dbContext = dbContext;
+        _clock = clock ?? new AppClock();
     }
 
     public async Task<IReadOnlyList<PaymentResponseDto>> GetActivePaymentsAsync(CancellationToken cancellationToken)
@@ -188,7 +190,7 @@ public sealed partial class PaymentService
         }
 
         var previousStatus = occurrence.Status;
-        var today = DateTime.UtcNow.Date;
+        var today = _clock.Today;
 
         if (previousStatus == status)
         {
@@ -244,7 +246,7 @@ public sealed partial class PaymentService
         CancellationToken cancellationToken)
     {
         withinDays = Math.Clamp(withinDays, 0, 30);
-        var today = DateTime.UtcNow.Date;
+        var today = _clock.Today;
         var threshold = today.AddDays(withinDays);
 
         var occurrences = await _dbContext.PaymentOccurrences
@@ -283,7 +285,7 @@ public sealed partial class PaymentService
         }
 
         occurrence.ReminderSent = true;
-        occurrence.UpdatedAt = DateTime.UtcNow;
+        occurrence.UpdatedAt = _clock.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -295,7 +297,7 @@ public sealed partial class PaymentService
 
     public async Task<PaymentSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = _clock.Today;
 
         var unpaid = await _dbContext.PaymentOccurrences
             .AsNoTracking()

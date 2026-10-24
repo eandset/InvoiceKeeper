@@ -1,5 +1,6 @@
 using InvoiceKeeper.Domain.Entities;
 using InvoiceKeeper.Domain.Enums;
+using InvoiceKeeper.Application.Common;
 using InvoiceKeeper.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,10 +10,12 @@ namespace InvoiceKeeper.Application.Services;
 public sealed class OverdueRecalculationService
 {
     private readonly AppDbContext _dbContext;
+    private readonly IAppClock _clock;
 
-    public OverdueRecalculationService(AppDbContext dbContext)
+    public OverdueRecalculationService(AppDbContext dbContext, IAppClock? clock = null)
     {
         _dbContext = dbContext;
+        _clock = clock ?? new AppClock();
     }
 
     /// <summary>
@@ -20,7 +23,7 @@ public sealed class OverdueRecalculationService
     /// </summary>
     public async Task<int> RecalculateAsync(CancellationToken cancellationToken = default)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = _clock.Today;
 
         var overdueOccurrences = await _dbContext.PaymentOccurrences
             .Where(o => o.Status == PaymentOccurrenceStatus.Unpaid &&
@@ -32,7 +35,7 @@ public sealed class OverdueRecalculationService
         foreach (var occurrence in overdueOccurrences)
         {
             occurrence.Status = PaymentOccurrenceStatus.Overdue;
-            occurrence.UpdatedAt = DateTime.UtcNow;
+            occurrence.UpdatedAt = _clock.UtcNow;
         }
 
         if (overdueOccurrences.Count > 0)
