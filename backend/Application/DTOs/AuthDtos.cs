@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 namespace InvoiceKeeper.Application.DTOs;
+using InvoiceKeeper.Application.Validation;
 
 public record LoginRequestDto(
     [Required, MaxLength(50)] string Username,
@@ -9,9 +10,9 @@ public record LoginRequestDto(
 public record AuthResponseDto(string Token, string Username, string Role);
 
 public record CreateUserDto(
-    [Required, MaxLength(50)] string Username,
+    [Required, MaxLength(50), RegularExpression(@"^[a-zA-Z0-9_-]{3,50}$", ErrorMessage = "Имя пользователя должно содержать 3-50 символов: буквы, цифры, '_' или '-'." )] string Username,
     [Required, MinLength(8), MaxLength(128)] string Password,
-    [Required] string Role);
+    [Required, AllowedValues("Admin", "User")] string Role);
 
 public record UserResponseDto(Guid Id, string Username, string Role, DateTime CreatedAt);
 

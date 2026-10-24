@@ -1,11 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 
 namespace InvoiceKeeper.Application.DTOs;
+using InvoiceKeeper.Application.Validation;
 
 public record CreatePaymentDto(
     [Required, MaxLength(255)] string Title,
     [Range(0.01, 1_000_000_000)] decimal Amount,
-    [Required] string Currency,
+    [Required, AllowedValues("RUB", "USD", "EUR")] string Currency,
     [Required] DateTime NextPaymentDate,
     [MaxLength(20)] string? Periodicity = null);
 
