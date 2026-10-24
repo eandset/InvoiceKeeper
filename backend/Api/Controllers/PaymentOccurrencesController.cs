@@ -16,6 +16,28 @@ public sealed class PaymentOccurrencesController : ControllerBase
         _paymentService = paymentService;
     }
 
+    /// <summary>Список всех периодов оплаты, включая просроченные.</summary>
+    [HttpGet]
+    [Authorize(Policy = "UserOrAdmin")]
+    [ProducesResponseType<IReadOnlyList<PaymentOccurrenceResponseDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PaymentOccurrenceResponseDto>>> GetAll(
+        CancellationToken cancellationToken)
+    {
+        var occurrences = await _paymentService.GetAllOccurrencesAsync(cancellationToken);
+        return Ok(occurrences);
+    }
+
+    /// <summary>Период оплаты по идентификатору.</summary>
+    [HttpGet("{id:guid}")]
+    [Authorize(Policy = "UserOrAdmin")]
+    [ProducesResponseType<PaymentOccurrenceResponseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PaymentOccurrenceResponseDto>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var occurrence = await _paymentService.GetOccurrenceByIdAsync(id, cancellationToken);
+        return Ok(occurrence);
+    }
+
     /// <summary>Обновление статуса оплаты периода (пользователь или администратор).</summary>
     [HttpPatch("{id:guid}")]
     [Authorize(Policy = "UserOrAdmin")]

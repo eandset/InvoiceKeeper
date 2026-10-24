@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using InvoiceKeeper.Application.DTOs;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace InvoiceKeeper.Tests.Api;
 
@@ -9,10 +10,12 @@ namespace InvoiceKeeper.Tests.Api;
 [Collection(ApiCollection.Name)]
 public sealed class ApiAccessTests
 {
+    private readonly ApiFactory _factory;
     private readonly HttpClient _client;
 
     public ApiAccessTests(ApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -26,6 +29,12 @@ public sealed class ApiAccessTests
     [InlineData("GET", "/api/v1/payments/summary")]
     [InlineData("GET", "/api/v1/users")]
     [InlineData("POST", "/api/v1/users")]
+    [InlineData("PATCH", "/api/v1/users/6a1f3c1e-0000-0000-0000-000000000000")]
+    [InlineData("DELETE", "/api/v1/users/6a1f3c1e-0000-0000-0000-000000000000")]
+    [InlineData("GET", "/api/v1/auth/me")]
+    [InlineData("POST", "/api/v1/auth/logout")]
+    [InlineData("GET", "/api/v1/payment-occurrences")]
+    [InlineData("GET", "/api/v1/payment-occurrences/6a1f3c1e-0000-0000-0000-000000000000")]
     [InlineData("GET", "/api/v1/payment-occurrences/reminders")]
     [InlineData("PATCH", "/api/v1/payment-occurrences/6a1f3c1e-0000-0000-0000-000000000000")]
     [InlineData("PATCH", "/api/v1/payment-occurrences/6a1f3c1e-0000-0000-0000-000000000000/reminder-sent")]
@@ -65,6 +74,20 @@ public sealed class ApiAccessTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Docs_RedirectsToSwaggerUi_WithoutToken()
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/api/v1/docs");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/swagger/index.html", response.Headers.Location!.ToString());
+    }
+
     // ---------- Роль User ----------
 
     [Fact]
@@ -94,6 +117,40 @@ public sealed class ApiAccessTests
     }
 
     [Fact]
+    public async Task User_CanReadOccurrenceListAndItem()
+    {
+        var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
+        var payment = await CreatePaymentAsync();
+
+        var list = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences", token);
+        var item = await SendAsync(
+            HttpMethod.Get,
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
+            token);
+
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        var occurrences = await list.Content.ReadFromJsonAsync<List<PaymentOccurrenceResponseDto>>();
+        Assert.Contains(occurrences!, o => o.Id == payment.NextOccurrence.Id);
+
+        Assert.Equal(HttpStatusCode.OK, item.StatusCode);
+        var occurrence = await item.Content.ReadFromJsonAsync<PaymentOccurrenceResponseDto>();
+        Assert.Equal(payment.NextOccurrence.Id, occurrence!.Id);
+    }
+
+    [Fact]
+    public async Task OccurrenceById_Returns404_ForUnknownOccurrence()
+    {
+        var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
+
+        var response = await SendAsync(
+            HttpMethod.Get,
+            $"/api/v1/payment-occurrences/{Guid.NewGuid()}",
+            token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task User_CannotManageUsers()
     {
         var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
@@ -104,9 +161,32 @@ public sealed class ApiAccessTests
             "/api/v1/users",
             token,
             new CreateUserDto("intruder", "Intruder-Passw0rd!", "Admin"));
+        var update = await SendAsync(
+            HttpMethod.Patch,
+            $"/api/v1/users/{Guid.NewGuid()}",
+            token,
+            new UpdateUserDto("(unchanged)", "Admin"));
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/users/{Guid.NewGuid()}", token);
 
         Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, update.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
+    }
+
+    [Fact]
+    public async Task User_CanReadOwnProfileAndLogout()
+    {
+        var token = await LoginAsync(ApiFactory.UserUsername, ApiFactory.UserPassword);
+
+        var me = await SendAsync(HttpMethod.Get, "/api/v1/auth/me", token);
+        var logout = await SendAsync(HttpMethod.Post, "/api/v1/auth/logout", token);
+
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        var profile = await me.Content.ReadFromJsonAsync<UserResponseDto>();
+        Assert.Equal(ApiFactory.UserUsername, profile!.Username);
+        Assert.Equal("User", profile.Role);
+        Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
     }
 
     [Fact]
@@ -194,6 +274,11 @@ public sealed class ApiAccessTests
 
         var payments = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", serviceToken: ApiFactory.BotToken);
         var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", serviceToken: ApiFactory.BotToken);
+        var occurrences = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences", serviceToken: ApiFactory.BotToken);
+        var occurrence = await SendAsync(
+            HttpMethod.Get,
+            $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
+            serviceToken: ApiFactory.BotToken);
         var status = await SendAsync(
             HttpMethod.Patch,
             $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
@@ -203,6 +288,8 @@ public sealed class ApiAccessTests
 
         Assert.Equal(HttpStatusCode.Forbidden, payments.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, analytics.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, occurrences.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, occurrence.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, status.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, users.StatusCode);
     }
@@ -251,6 +338,51 @@ public sealed class ApiAccessTests
 
         var readAfterDelete = await SendAsync(HttpMethod.Get, $"/api/v1/recurring-payments/{created.Id}", token);
         Assert.Equal(HttpStatusCode.NotFound, readAfterDelete.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_UpdatesAndDeletesUser()
+    {
+        var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
+        var username = $"upd-user-{Guid.NewGuid():N}"[..20];
+
+        var created = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/users",
+            token,
+            new CreateUserDto(username, "Initial-Passw0rd!", "User"));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var user = await created.Content.ReadFromJsonAsync<UserResponseDto>();
+        var update = await SendAsync(
+            HttpMethod.Patch,
+            $"/api/v1/users/{user!.Id}",
+            token,
+            new UpdateUserDto("(unchanged)", "Admin"));
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var updated = await update.Content.ReadFromJsonAsync<UserResponseDto>();
+        Assert.Equal("Admin", updated!.Role);
+        Assert.Equal(username, updated.Username);
+
+        var delete = await SendAsync(HttpMethod.Delete, $"/api/v1/users/{user.Id}", token);
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+
+        var afterDelete = await SendAsync(HttpMethod.Get, $"/api/v1/users/{user.Id}", token);
+        Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateUser_Returns409_ForDuplicateUsername()
+    {
+        var token = await LoginAsync(ApiFactory.AdminUsername, ApiFactory.AdminPassword);
+
+        var response = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/users",
+            token,
+            new CreateUserDto(ApiFactory.UserUsername, "Duplicate-Passw0rd!", "User"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

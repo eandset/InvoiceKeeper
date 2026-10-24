@@ -29,6 +29,56 @@ public sealed class PaymentService
         return payments.Select(PaymentMapper.ToPaymentDto).ToList();
     }
 
+    public async Task<IReadOnlyList<PaymentOccurrenceResponseDto>> GetAllOccurrencesAsync(
+        CancellationToken cancellationToken)
+    {
+        var today = DateTime.UtcNow.Date;
+
+        return await _dbContext.PaymentOccurrences
+            .AsNoTracking()
+            .Include(o => o.RecurringPayment)
+            .Where(o => o.RecurringPayment != null && !o.RecurringPayment.IsDeleted)
+            .OrderBy(o => o.DueDate)
+            .ThenBy(o => o.RecurringPayment!.Title)
+            .Select(o => new PaymentOccurrenceResponseDto(
+                o.Id,
+                o.RecurringPaymentId,
+                o.RecurringPayment!.Title,
+                o.RecurringPayment.Amount,
+                o.RecurringPayment.Currency.ToString(),
+                o.DueDate,
+                o.IsPaid,
+                o.ActualPaymentDate,
+                !o.IsPaid && today > o.DueDate))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PaymentOccurrenceResponseDto> GetOccurrenceByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var today = DateTime.UtcNow.Date;
+
+        var occurrence = await _dbContext.PaymentOccurrences
+            .AsNoTracking()
+            .Include(o => o.RecurringPayment)
+            .Where(o => o.Id == id && o.RecurringPayment != null && !o.RecurringPayment.IsDeleted)
+            .Select(o => new PaymentOccurrenceResponseDto(
+                o.Id,
+                o.RecurringPaymentId,
+                o.RecurringPayment!.Title,
+                o.RecurringPayment.Amount,
+                o.RecurringPayment.Currency.ToString(),
+                o.DueDate,
+                o.IsPaid,
+                o.ActualPaymentDate,
+                !o.IsPaid && today > o.DueDate))
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException($"Период оплаты {id} не найден.");
+
+        return occurrence;
+    }
+
     public async Task<PaymentResponseDto> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var payment = await _dbContext.RecurringPayments

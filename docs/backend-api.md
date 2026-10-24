@@ -10,7 +10,7 @@ Copy-Item .env.example .env    # задайте POSTGRES_PASSWORD, JWT_SECRET, A
 docker compose up -d --build
 ```
 
-Swagger UI: http://localhost:8080/swagger
+Swagger UI: http://localhost:8080/swagger (или http://localhost:8080/api/v1/docs)
 
 Локально без Docker:
 
@@ -49,6 +49,15 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 { "token": "<jwt>", "username": "admin", "role": "Admin" }
 ```
 
+| Метод | Путь | Роль | Описание |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/login` | анонимно | вход по логину и паролю |
+| `GET` | `/api/v1/auth/me` | User/Admin | профиль текущего пользователя |
+| `POST` | `/api/v1/auth/logout` | User/Admin | завершение сессии (`204`) |
+
+JWT не хранится на сервере, поэтому `logout` не отзывает токен: клиент должен
+удалить его у себя. До истечения срока действия токен остаётся валидным.
+
 ### Пользователи
 
 | Метод | Путь | Роль | Описание |
@@ -56,21 +65,28 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 | `GET` | `/api/v1/users` | Admin | список пользователей |
 | `GET` | `/api/v1/users/{id}` | Admin | пользователь по идентификатору |
 | `POST` | `/api/v1/users` | Admin | создание пользователя |
+| `PATCH` | `/api/v1/users/{id}` | Admin | изменение роли и/или пароля |
+| `DELETE` | `/api/v1/users/{id}` | Admin | удаление пользователя (`204`) |
 
 ```json
 { "username": "ivan", "password": "minimum-8-chars", "role": "User" }
 ```
 
+```json
+{ "password": "(unchanged)", "role": "Admin" }
+```
+
+В `PATCH` значение `"(unchanged)"` (или пустая строка) сохраняет текущий пароль.
 Имя пользователя уникально без учёта регистра (`409 Conflict` при дубликате).
 
 ### Платежи
 
 | Метод | Путь | Роль | Описание |
 |---|---|---|---|
-| `GET` | `/api/v1/payments` | User/Admin | активные платежи + ближайший неоплаченный период |
-| `GET` | `/api/v1/payments/{id}` | User/Admin | один активный платёж |
-| `POST` | `/api/v1/payments` | Admin | создание платежа и первого периода |
-| `DELETE` | `/api/v1/payments/{id}` | Admin | мягкое удаление (`isDeleted = true`) |
+| `GET` | `/api/v1/recurring-payments` | User/Admin | активные платежи + ближайший неоплаченный период |
+| `GET` | `/api/v1/recurring-payments/{id}` | User/Admin | один активный платёж |
+| `POST` | `/api/v1/recurring-payments` | Admin | создание платежа и первого периода |
+| `DELETE` | `/api/v1/recurring-payments/{id}` | Admin | мягкое удаление (`isDeleted = true`) |
 
 ```json
 {
@@ -91,7 +107,13 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 
 ### Периоды оплаты
 
-`PATCH /api/v1/occurrences/{id}/status` (User/Admin)
+| Метод | Путь | Роль | Описание |
+|---|---|---|---|
+| `GET` | `/api/v1/payment-occurrences` | User/Admin | все периоды: оплаченные, ожидаемые и просроченные |
+| `GET` | `/api/v1/payment-occurrences/{id}` | User/Admin | конкретный период |
+| `PATCH` | `/api/v1/payment-occurrences/{id}` | User/Admin | подтверждение/отмена оплаты и фактическая дата |
+
+`PATCH /api/v1/payment-occurrences/{id}`
 
 ```json
 { "isPaid": true, "actualPaymentDate": null }
@@ -109,8 +131,8 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 
 | Метод | Путь | Описание |
 |---|---|---|
-| `GET` | `/api/v1/occurrences/reminders?withinDays=3` | неоплаченные периоды без отправленного напоминания со сроком не позже `today + withinDays` |
-| `PATCH` | `/api/v1/occurrences/{id}/reminder-sent` | отметить напоминание отправленным (`204`) |
+| `GET` | `/api/v1/payment-occurrences/reminders?withinDays=3` | неоплаченные периоды без отправленного напоминания со сроком не позже `today + withinDays` |
+| `PATCH` | `/api/v1/payment-occurrences/{id}/reminder-sent` | отметить напоминание отправленным (`204`) |
 
 Элемент ответа:
 
@@ -131,7 +153,7 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 
 ### Аналитика
 
-`GET /api/v1/analytics/summary` (User/Admin)
+`GET /api/v1/payments/summary` (User/Admin)
 
 ```json
 {
@@ -146,6 +168,10 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 Суммируются неоплаченные периоды активных платежей. `overdueCount` — количество
 таких периодов с `dueDate` в прошлом.
 
+### Документация
+
+`GET /api/v1/docs` — редирект (`302`) на `/swagger/index.html`. Доступен без токена.
+
 ## Ошибки
 
 Бизнес-ошибки возвращаются в формате `application/problem+json`:
@@ -155,7 +181,7 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
   "title": "Конфликт состояния",
   "status": 409,
   "detail": "Платёж удалён, изменение его периодов недоступно.",
-  "instance": "/api/v1/occurrences/..."
+  "instance": "/api/v1/payment-occurrences/..."
 }
 ```
 

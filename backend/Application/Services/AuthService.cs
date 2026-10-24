@@ -79,6 +79,41 @@ public sealed class AuthService
             .Select(u => new UserResponseDto(u.Id, u.Username, u.Role.ToString(), u.CreatedAt))
             .ToListAsync(cancellationToken);
 
+    public async Task<UserResponseDto> UpdateUserAsync(
+        Guid id,
+        UpdateUserDto request,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var role) ||
+            !Enum.IsDefined(role))
+        {
+            throw new BadRequestException("Роль должна быть 'Admin' или 'User'.");
+        }
+
+        var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
+            ?? throw new NotFoundException($"Пользователь {id} не найден.");
+
+        user.Role = role;
+
+        if (!string.IsNullOrWhiteSpace(request.Password) && request.Password != "(unchanged)")
+        {
+            user.PasswordHash = _passwordHasher.Hash(request.Password);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new UserResponseDto(user.Id, user.Username, user.Role.ToString(), user.CreatedAt);
+    }
+
+    public async Task DeleteUserAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
+            ?? throw new NotFoundException($"Пользователь {id} не найден.");
+
+        _dbContext.Users.Remove(user);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<UserResponseDto> GetUserByIdAsync(Guid id, CancellationToken cancellationToken) =>
         await _dbContext.Users
             .AsNoTracking()

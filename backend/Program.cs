@@ -35,7 +35,8 @@ builder.Services.Configure<JwtOptions>(options =>
 builder.Services.Configure<BotAuthOptions>(options =>
 {
     var section = builder.Configuration.GetSection(BotAuthOptions.SectionName);
-    options.Token = section["Token"] ?? builder.Configuration["BOT_SERVICE_TOKEN"] ?? string.Empty;
+    var envToken = builder.Configuration["BOT_SERVICE_TOKEN"];
+    options.Token = envToken ?? section["Token"] ?? string.Empty;
     options.ServiceName = section["ServiceName"] ?? options.ServiceName;
 });
 
@@ -58,9 +59,10 @@ builder.Services
     .AddPolicyScheme("Multi", "JWT or service token", options =>
     {
         options.ForwardDefaultSelector = context =>
-            context.Request.Headers.ContainsKey("Authorization")
-                ? JwtBearerDefaults.AuthenticationScheme
-                : ServiceTokenAuthenticationHandler.SchemeName;
+            !context.Request.Headers.ContainsKey("Authorization") &&
+            context.Request.Headers.ContainsKey(ServiceTokenAuthenticationHandler.HeaderName)
+                ? ServiceTokenAuthenticationHandler.SchemeName
+                : JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {

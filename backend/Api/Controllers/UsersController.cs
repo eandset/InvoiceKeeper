@@ -36,6 +36,29 @@ public sealed class UsersController : ControllerBase
         return Ok(user);
     }
 
+    /// <summary>Изменение пользователя (роль и/или пароль).</summary>
+    [HttpPatch("{id:guid}")]
+    [ProducesResponseType<UserResponseDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserResponseDto>> Update(
+        Guid id,
+        [FromBody] UpdateUserDto request,
+        CancellationToken cancellationToken)
+    {
+        var user = await _authService.UpdateUserAsync(id, request, cancellationToken);
+        return Ok(user);
+    }
+
+    /// <summary>Удаление пользователя.</summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        await _authService.DeleteUserAsync(id, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Создание нового пользователя (только администратор).</summary>
     [HttpPost]
     [ProducesResponseType<UserResponseDto>(StatusCodes.Status201Created)]

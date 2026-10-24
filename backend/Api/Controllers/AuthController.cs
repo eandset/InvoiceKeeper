@@ -28,5 +28,25 @@ public sealed class AuthController : ControllerBase
         var response = await _authService.LoginAsync(request, cancellationToken);
         return Ok(response);
     }
-}
 
+    /// <summary>Текущий авторизованный пользователь.</summary>
+    [HttpGet("me")]
+    [Authorize(Policy = "UserOrAdmin")]
+    [ProducesResponseType<UserResponseDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<UserResponseDto>> Me(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var user = await _authService.GetUserByIdAsync(userId, cancellationToken);
+        return Ok(user);
+    }
+
+    /// <summary>Выход из системы. На JWT нет серверной сессии, поэтому метод ничего не делает.</summary>
+    [HttpPost("logout")]
+    [Authorize(Policy = "UserOrAdmin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        await Task.CompletedTask;
+        return NoContent();
+    }
+}
