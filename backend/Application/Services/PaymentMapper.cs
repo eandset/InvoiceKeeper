@@ -1,5 +1,6 @@
 using InvoiceKeeper.Application.DTOs;
 using InvoiceKeeper.Domain.Entities;
+using InvoiceKeeper.Domain.Enums;
 
 namespace InvoiceKeeper.Application.Services;
 
@@ -15,14 +16,14 @@ internal static class PaymentMapper
             payment.Amount,
             payment.Currency.ToString(),
             occurrence.DueDate,
-            occurrence.IsPaid,
+            occurrence.Status.ToString(),
             occurrence.ActualPaymentDate,
-            occurrence.IsOverdue);
+            occurrence.Status == PaymentOccurrenceStatus.Overdue);
 
     public static PaymentResponseDto ToPaymentDto(RecurringPayment payment)
     {
         var nextOccurrence = payment.Occurrences
-            .Where(o => !o.IsPaid)
+            .Where(o => o.Status != PaymentOccurrenceStatus.Paid)
             .OrderBy(o => o.DueDate)
             .FirstOrDefault();
 
@@ -36,8 +37,8 @@ internal static class PaymentMapper
             payment.IsDeleted,
             payment.CreatedAt,
             nextOccurrence is null ? null : ToOccurrenceDto(nextOccurrence, payment),
-            payment.Occurrences.Count(o => o.IsPaid),
-            payment.Occurrences.Count(o => !o.IsPaid));
+            payment.Occurrences.Count(o => o.Status == PaymentOccurrenceStatus.Paid),
+            payment.Occurrences.Count(o => o.Status != PaymentOccurrenceStatus.Paid));
     }
 }
 

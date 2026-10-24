@@ -16,7 +16,7 @@ public record PaymentOccurrenceResponseDto(
     decimal Amount,
     string Currency,
     DateTime DueDate,
-    bool IsPaid,
+    string Status,
     DateTime? ActualPaymentDate,
     bool IsOverdue);
 
@@ -34,7 +34,7 @@ public record PaymentResponseDto(
     int UnpaidOccurrencesCount);
 
 public record UpdatePaymentStatusDto(
-    bool IsPaid,
+    string Status,
     DateTime? ActualPaymentDate);
 
 public record ReminderOccurrenceDto(

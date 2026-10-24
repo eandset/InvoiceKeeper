@@ -28,7 +28,7 @@ public class PaymentServiceTests
 
         var stored = await db.Context.PaymentOccurrences.SingleAsync();
         Assert.Equal(DueDate, stored.DueDate);
-        Assert.False(stored.IsPaid);
+        Assert.False(stored.Status.ToString() == "Paid");
     }
 
     [PostgresFact]
@@ -42,10 +42,10 @@ public class PaymentServiceTests
 
         var paid = await service.UpdateStatusAsync(
             payment.NextOccurrence!.Id,
-            new UpdatePaymentStatusDto(true, null),
+            new UpdatePaymentStatusDto("Paid",  null),
             CancellationToken.None);
 
-        Assert.True(paid.IsPaid);
+        Assert.True(paid.Status == "Paid");
         Assert.Equal(DateTime.UtcNow.Date, paid.ActualPaymentDate);
 
         var occurrences = await db.Context.PaymentOccurrences
@@ -53,8 +53,8 @@ public class PaymentServiceTests
             .ToListAsync();
 
         Assert.Equal(2, occurrences.Count);
-        Assert.True(occurrences[0].IsPaid);
-        Assert.False(occurrences[1].IsPaid);
+        Assert.True(occurrences[0].Status.ToString() == "Paid");
+        Assert.False(occurrences[1].Status.ToString() == "Paid");
         Assert.Equal(DueDate.AddMonths(1), occurrences[1].DueDate);
 
         var storedPayment = await db.Context.RecurringPayments.SingleAsync();
@@ -71,8 +71,8 @@ public class PaymentServiceTests
             CancellationToken.None);
         var occurrenceId = payment.NextOccurrence!.Id;
 
-        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto(true, null), CancellationToken.None);
-        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto(true, null), CancellationToken.None);
+        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto("Paid",  null), CancellationToken.None);
+        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto("Paid",  null), CancellationToken.None);
 
         Assert.Equal(2, await db.Context.PaymentOccurrences.CountAsync());
     }
@@ -87,13 +87,13 @@ public class PaymentServiceTests
             CancellationToken.None);
         var occurrenceId = payment.NextOccurrence!.Id;
 
-        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto(true, null), CancellationToken.None);
+        await service.UpdateStatusAsync(occurrenceId, new UpdatePaymentStatusDto("Paid",  null), CancellationToken.None);
         var unpaid = await service.UpdateStatusAsync(
             occurrenceId,
-            new UpdatePaymentStatusDto(false, null),
+            new UpdatePaymentStatusDto("Unpaid",  null),
             CancellationToken.None);
 
-        Assert.False(unpaid.IsPaid);
+        Assert.False(unpaid.Status == "Paid");
         Assert.Null(unpaid.ActualPaymentDate);
     }
 
@@ -147,4 +147,8 @@ public class PaymentServiceTests
         Assert.Equal(1, summary.OverdueCount);
     }
 }
+
+
+
+
 

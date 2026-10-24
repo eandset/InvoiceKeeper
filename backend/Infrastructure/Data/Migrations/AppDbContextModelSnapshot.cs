@@ -38,12 +38,6 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("due_date");
 
-                    b.Property<bool>("IsPaid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_paid");
-
                     b.Property<Guid>("RecurringPaymentId")
                         .HasColumnType("uuid")
                         .HasColumnName("recurring_payment_id");
@@ -54,23 +48,27 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("reminder_sent");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Unpaid")
+                        .HasColumnName("status");
+
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DueDate")
                         .HasDatabaseName("idx_occurrences_due_date");
 
-                    b.HasIndex("IsPaid")
-                        .HasDatabaseName("idx_occurrences_is_paid");
-
                     b.HasIndex("ReminderSent")
                         .HasDatabaseName("idx_occurrences_reminder_sent")
                         .HasFilter("reminder_sent = FALSE");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("idx_occurrences_status");
 
                     b.HasIndex("RecurringPaymentId", "DueDate")
                         .IsUnique()

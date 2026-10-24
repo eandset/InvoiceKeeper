@@ -1,3 +1,4 @@
+using InvoiceKeeper.Domain.Enums;
 using InvoiceKeeper.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,9 +25,11 @@ public class PaymentOccurrenceConfiguration : IEntityTypeConfiguration<PaymentOc
             .HasColumnType("date")
             .IsRequired();
 
-        builder.Property(po => po.IsPaid)
-            .HasColumnName("is_paid")
-            .HasDefaultValue(false)
+        builder.Property(po => po.Status)
+            .HasColumnName("status")
+            .HasConversion<string>()
+            .HasDefaultValue(PaymentOccurrenceStatus.Unpaid)
+            .ValueGeneratedNever()
             .IsRequired();
 
         builder.Property(po => po.ActualPaymentDate)
@@ -40,17 +43,18 @@ public class PaymentOccurrenceConfiguration : IEntityTypeConfiguration<PaymentOc
 
         builder.Property(po => po.UpdatedAt)
             .HasColumnName("updated_at")
-            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            .HasColumnType("timestamp with time zone")
+            .IsRequired();
 
-        builder.Ignore(po => po.IsOverdue); // Исключаем вычисляемое свойство из маппинга
+        builder.Ignore(po => po.IsPaid);
+        builder.Ignore(po => po.IsOverdue);
 
         builder.HasIndex(po => po.DueDate).HasDatabaseName("idx_occurrences_due_date");
-        builder.HasIndex(po => po.IsPaid).HasDatabaseName("idx_occurrences_is_paid");
+        builder.HasIndex(po => po.Status).HasDatabaseName("idx_occurrences_status");
         builder.HasIndex(po => po.ReminderSent)
             .HasDatabaseName("idx_occurrences_reminder_sent")
             .HasFilter("reminder_sent = FALSE");
 
-        // Для одного платежа не может быть двух периодов с одинаковым сроком оплаты.
         builder.HasIndex(po => new { po.RecurringPaymentId, po.DueDate })
             .IsUnique()
             .HasDatabaseName("ux_occurrences_payment_due_date");

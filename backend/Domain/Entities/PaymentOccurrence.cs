@@ -1,3 +1,5 @@
+using InvoiceKeeper.Domain.Enums;
+
 namespace InvoiceKeeper.Domain.Entities;
 
 public class PaymentOccurrence
@@ -8,11 +10,13 @@ public class PaymentOccurrence
     public RecurringPayment? RecurringPayment { get; set; }
 
     public DateTime DueDate { get; set; }
-    public bool IsPaid { get; set; }
+    public PaymentOccurrenceStatus Status { get; set; } = PaymentOccurrenceStatus.Unpaid;
     public DateTime? ActualPaymentDate { get; set; }
     public bool ReminderSent { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Вычисляемое свойство (не отображается в БД)
-    public bool IsOverdue => !IsPaid && DateTime.UtcNow.Date > DueDate.Date;
+    public bool IsPaid => Status == PaymentOccurrenceStatus.Paid;
+
+    public bool IsOverdue => Status == PaymentOccurrenceStatus.Overdue;
 }
+

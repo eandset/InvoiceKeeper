@@ -16,7 +16,6 @@ public sealed class PaymentService
         _dbContext = dbContext;
     }
 
-    /// <summary>Активные (не удалённые) платежи вместе с ближайшим неоплаченным периодом.</summary>
     public async Task<IReadOnlyList<PaymentResponseDto>> GetActivePaymentsAsync(CancellationToken cancellationToken)
     {
         var payments = await _dbContext.RecurringPayments
@@ -32,8 +31,6 @@ public sealed class PaymentService
     public async Task<IReadOnlyList<PaymentOccurrenceResponseDto>> GetAllOccurrencesAsync(
         CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
-
         return await _dbContext.PaymentOccurrences
             .AsNoTracking()
             .Include(o => o.RecurringPayment)
@@ -47,9 +44,9 @@ public sealed class PaymentService
                 o.RecurringPayment.Amount,
                 o.RecurringPayment.Currency.ToString(),
                 o.DueDate,
-                o.IsPaid,
+                o.Status.ToString(),
                 o.ActualPaymentDate,
-                !o.IsPaid && today > o.DueDate))
+                o.Status == PaymentOccurrenceStatus.Overdue))
             .ToListAsync(cancellationToken);
     }
 
@@ -57,8 +54,6 @@ public sealed class PaymentService
         Guid id,
         CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
-
         var occurrence = await _dbContext.PaymentOccurrences
             .AsNoTracking()
             .Include(o => o.RecurringPayment)
@@ -70,9 +65,9 @@ public sealed class PaymentService
                 o.RecurringPayment.Amount,
                 o.RecurringPayment.Currency.ToString(),
                 o.DueDate,
-                o.IsPaid,
+                o.Status.ToString(),
                 o.ActualPaymentDate,
-                !o.IsPaid && today > o.DueDate))
+                o.Status == PaymentOccurrenceStatus.Overdue))
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException($"Период оплаты {id} не найден.");
 
@@ -120,7 +115,8 @@ public sealed class PaymentService
 
         payment.Occurrences.Add(new PaymentOccurrence
         {
-            DueDate = nextPaymentDate
+            DueDate = nextPaymentDate,
+            UpdatedAt = DateTime.UtcNow
         });
 
         _dbContext.RecurringPayments.Add(payment);
@@ -129,122 +125,92 @@ public sealed class PaymentService
         return PaymentMapper.ToPaymentDto(payment);
     }
 
-    /// <summary>Мягкое удаление: платеж и его история остаются в БД.</summary>
     public async Task SoftDeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var payment = await _dbContext.RecurringPayments
-            .SingleOrDefaultAsync(p => p.Id == id, cancellationToken)
+            .Include(p => p.Occurrences)
+            .SingleOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken)
             ?? throw new NotFoundException($"Платёж {id} не найден.");
-
-        if (payment.IsDeleted)
-        {
-            return;
-        }
 
         payment.IsDeleted = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>
-    /// Отмечает период оплаченным. После оплаты последнего неоплаченного периода
-    /// автоматически создаётся следующий период согласно периодичности платежа.
-    /// </summary>
     public async Task<PaymentOccurrenceResponseDto> UpdateStatusAsync(
-        Guid occurrenceId,
+        Guid id,
         UpdatePaymentStatusDto request,
         CancellationToken cancellationToken)
     {
-        var occurrence = await _dbContext.PaymentOccurrences
-            .Include(o => o.RecurringPayment)
-            .SingleOrDefaultAsync(o => o.Id == occurrenceId, cancellationToken)
-            ?? throw new NotFoundException($"Период оплаты {occurrenceId} не найден.");
-
-        var payment = occurrence.RecurringPayment
-            ?? throw new ConflictException("Период оплаты не связан с регулярным платежом.");
-
-        if (payment.IsDeleted)
+        if (!Enum.TryParse<PaymentOccurrenceStatus>(request.Status, ignoreCase: true, out var status) ||
+            !Enum.IsDefined(status))
         {
-            throw new ConflictException("Платёж удалён, изменение его периодов недоступно.");
+            throw new BadRequestException("Статус должен быть одним из: Unpaid, Paid, Overdue.");
         }
 
-        if (!request.IsPaid)
+        var occurrence = await _dbContext.PaymentOccurrences
+            .Include(o => o.RecurringPayment)
+            .ThenInclude(p => p!.Occurrences)
+            .SingleOrDefaultAsync(o => o.Id == id, cancellationToken)
+            ?? throw new NotFoundException($"Период оплаты {id} не найден.");
+
+        var payment = occurrence.RecurringPayment;
+        if (payment is null || payment.IsDeleted)
         {
-            occurrence.IsPaid = false;
-            occurrence.ActualPaymentDate = null;
-            occurrence.UpdatedAt = DateTime.UtcNow;
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            throw new NotFoundException($"Период оплаты {id} не найден.");
+        }
+
+        var previousStatus = occurrence.Status;
+        var today = DateTime.UtcNow.Date;
+
+        if (previousStatus == status)
+        {
             return PaymentMapper.ToOccurrenceDto(occurrence, payment);
         }
 
-        occurrence.IsPaid = true;
-        occurrence.ActualPaymentDate = (request.ActualPaymentDate ?? DateTime.UtcNow).Date;
-        occurrence.ReminderSent = true;
-        occurrence.UpdatedAt = DateTime.UtcNow;
+        occurrence.Status = status;
 
-        var hasLaterUnpaid = await _dbContext.PaymentOccurrences
-            .AnyAsync(o => o.RecurringPaymentId == payment.Id &&
-                           o.Id != occurrence.Id &&
-                           !o.IsPaid &&
-                           o.DueDate > occurrence.DueDate,
-                cancellationToken);
-
-        PaymentOccurrence? nextOccurrence = null;
-        DateTime? nextDueDate = null;
-
-        if (!hasLaterUnpaid)
+        if (status == PaymentOccurrenceStatus.Paid)
         {
-            nextDueDate = PeriodicityCalculator.Next(occurrence.DueDate, payment.Periodicity);
-            var candidateDueDate = nextDueDate.Value;
+            occurrence.ActualPaymentDate = request.ActualPaymentDate?.Date ?? today;
 
-            var exists = await _dbContext.PaymentOccurrences
-                .AnyAsync(o => o.RecurringPaymentId == payment.Id && o.DueDate == candidateDueDate,
-                    cancellationToken);
-
-            if (!exists)
+            if (previousStatus != PaymentOccurrenceStatus.Paid)
             {
-                nextOccurrence = new PaymentOccurrence
-                {
-                    RecurringPaymentId = payment.Id,
-                    DueDate = candidateDueDate
-                };
-                _dbContext.PaymentOccurrences.Add(nextOccurrence);
-            }
-
-            if (payment.NextPaymentDate < candidateDueDate)
-            {
-                payment.NextPaymentDate = candidateDueDate;
+                EnsureNextOccurrence(payment, occurrence);
             }
         }
-
-        try
+        else
         {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // Параллельный запрос мог успеть создать период на ту же дату (уникальный индекс).
-            // Если такой период уже есть, операция фактически выполнена.
-            if (nextOccurrence is not null)
-            {
-                _dbContext.Entry(nextOccurrence).State = EntityState.Detached;
-            }
-
-            var alreadyCreated = nextDueDate is not null && await _dbContext.PaymentOccurrences
-                .AsNoTracking()
-                .AnyAsync(o => o.RecurringPaymentId == payment.Id && o.DueDate == nextDueDate.Value,
-                    cancellationToken);
-
-            if (!alreadyCreated)
-            {
-                throw;
-            }
+            occurrence.ActualPaymentDate = null;
         }
 
-        // Возвращаем актуальное состояние периода после возможного добавления следующего.
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
         return PaymentMapper.ToOccurrenceDto(occurrence, payment);
     }
 
-    /// <summary>Периоды, по которым нужно отправить напоминание: не оплачены, без напоминания, срок ≤ 3 дней.</summary>
+    private static void EnsureNextOccurrence(
+        RecurringPayment payment,
+        PaymentOccurrence currentOccurrence)
+    {
+        var nextDueDate = PeriodicityCalculator.Next(currentOccurrence.DueDate, payment.Periodicity);
+        var exists = payment.Occurrences.Any(o => o.DueDate == nextDueDate);
+
+        if (!exists)
+        {
+            payment.Occurrences.Add(new PaymentOccurrence
+            {
+                Id = Guid.Empty,
+                DueDate = nextDueDate,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (payment.NextPaymentDate < nextDueDate)
+        {
+            payment.NextPaymentDate = nextDueDate;
+        }
+    }
+
     public async Task<IReadOnlyList<ReminderOccurrenceDto>> GetRemindersAsync(
         int withinDays,
         CancellationToken cancellationToken)
@@ -255,7 +221,7 @@ public sealed class PaymentService
 
         var occurrences = await _dbContext.PaymentOccurrences
             .AsNoTracking()
-            .Where(o => !o.IsPaid &&
+            .Where(o => o.Status != PaymentOccurrenceStatus.Paid &&
                         !o.ReminderSent &&
                         o.DueDate <= threshold &&
                         o.RecurringPayment != null &&
@@ -273,7 +239,7 @@ public sealed class PaymentService
                 o.RecurringPayment.Currency.ToString(),
                 o.DueDate,
                 (o.DueDate.Date - today).Days,
-                !o.IsPaid && today > o.DueDate))
+                o.Status == PaymentOccurrenceStatus.Overdue))
             .ToList();
     }
 
@@ -293,14 +259,15 @@ public sealed class PaymentService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>Суммы предстоящих (неоплаченных) счетов по валютам и счётчики периодов.</summary>
     public async Task<PaymentSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
     {
         var today = DateTime.UtcNow.Date;
 
         var unpaid = await _dbContext.PaymentOccurrences
             .AsNoTracking()
-            .Where(o => !o.IsPaid && o.RecurringPayment != null && !o.RecurringPayment.IsDeleted)
+            .Where(o => o.Status != PaymentOccurrenceStatus.Paid &&
+                        o.RecurringPayment != null &&
+                        !o.RecurringPayment.IsDeleted)
             .Select(o => new
             {
                 o.RecurringPayment!.Currency,
@@ -328,4 +295,3 @@ public sealed class PaymentService
         return false;
     }
 }
-
