@@ -141,11 +141,7 @@ public sealed partial class PaymentService
         UpdatePaymentStatusDto request,
         CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<PaymentOccurrenceStatus>(request.Status, ignoreCase: true, out var status) ||
-            !Enum.IsDefined(status))
-        {
-            throw new BadRequestException("Статус должен быть одним из: Unpaid, Paid, Overdue.");
-        }
+        var status = request.IsPaid ? PaymentOccurrenceStatus.Paid : PaymentOccurrenceStatus.Unpaid;
 
         var occurrence = await _dbContext.PaymentOccurrences
             .Include(o => o.RecurringPayment)

@@ -199,7 +199,7 @@ public sealed class ApiAccessTests
             HttpMethod.Patch,
             $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
             token,
-            new UpdatePaymentStatusDto("Paid",  null));
+            new UpdatePaymentStatusDto(true, null));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.Content.ReadFromJsonAsync<PaymentOccurrenceResponseDto>();
@@ -282,7 +282,7 @@ public sealed class ApiAccessTests
         var status = await SendAsync(
             HttpMethod.Patch,
             $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
-            body: new UpdatePaymentStatusDto("Paid",  null),
+            body: new UpdatePaymentStatusDto(true, null),
             serviceToken: ApiFactory.BotToken);
         var users = await SendAsync(HttpMethod.Get, "/api/v1/users", serviceToken: ApiFactory.BotToken);
 
@@ -447,7 +447,7 @@ public sealed class ApiAccessTests
             HttpMethod.Patch,
             $"/api/v1/payment-occurrences/{Guid.NewGuid()}",
             token,
-            new UpdatePaymentStatusDto("Paid",  null));
+            new UpdatePaymentStatusDto(true, null));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -531,5 +531,6 @@ public sealed class ApiAccessTests
         return _client.SendAsync(request);
     }
 }
+
 
 
