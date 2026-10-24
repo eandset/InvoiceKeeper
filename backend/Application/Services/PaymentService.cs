@@ -29,12 +29,43 @@ public sealed partial class PaymentService
     }
 
     public async Task<IReadOnlyList<PaymentOccurrenceResponseDto>> GetAllOccurrencesAsync(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OccurrenceFilterDto? filter = null)
     {
-        return await _dbContext.PaymentOccurrences
+        var query = _dbContext.PaymentOccurrences
             .AsNoTracking()
             .Include(o => o.RecurringPayment)
             .Where(o => o.RecurringPayment != null && !o.RecurringPayment.IsDeleted)
+            .AsQueryable();
+
+        if (filter is not null)
+        {
+            if (filter.IsPaid.HasValue)
+            {
+                query = filter.IsPaid.Value
+                    ? query.Where(o => o.Status == PaymentOccurrenceStatus.Paid)
+                    : query.Where(o => o.Status != PaymentOccurrenceStatus.Paid);
+            }
+
+            if (filter.IsOverdue.HasValue)
+            {
+                query = filter.IsOverdue.Value
+                    ? query.Where(o => o.Status == PaymentOccurrenceStatus.Overdue)
+                    : query.Where(o => o.Status != PaymentOccurrenceStatus.Overdue);
+            }
+
+            if (filter.DueBefore.HasValue)
+            {
+                query = query.Where(o => o.DueDate <= filter.DueBefore.Value.Date);
+            }
+
+            if (filter.DueAfter.HasValue)
+            {
+                query = query.Where(o => o.DueDate >= filter.DueAfter.Value.Date);
+            }
+        }
+
+        return await query
             .OrderBy(o => o.DueDate)
             .ThenBy(o => o.RecurringPayment!.Title)
             .Select(o => new PaymentOccurrenceResponseDto(
@@ -133,6 +164,7 @@ public sealed partial class PaymentService
             ?? throw new NotFoundException($"Платёж {id} не найден.");
 
         payment.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -253,6 +285,12 @@ public sealed partial class PaymentService
         occurrence.ReminderSent = true;
         occurrence.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PaymentOccurrenceResponseDto>> GetOverdueAsync(
+        CancellationToken cancellationToken)
+    {
+        return await GetAllOccurrencesAsync(cancellationToken, new OccurrenceFilterDto(IsOverdue: true));
     }
 
     public async Task<PaymentSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)

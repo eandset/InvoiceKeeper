@@ -304,6 +304,7 @@ public sealed class ApiAccessTests
         var users = await SendAsync(HttpMethod.Get, "/api/v1/users", token);
         var payments = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", token);
         var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", token);
+        var overdue = await SendAsync(HttpMethod.Get, "/api/v1/analytics/overdue", token);
         var reminders = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences/reminders", token);
         var created = await SendAsync(
             HttpMethod.Post,
@@ -314,6 +315,7 @@ public sealed class ApiAccessTests
         Assert.Equal(HttpStatusCode.OK, users.StatusCode);
         Assert.Equal(HttpStatusCode.OK, payments.StatusCode);
         Assert.Equal(HttpStatusCode.OK, analytics.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, overdue.StatusCode);
         Assert.Equal(HttpStatusCode.OK, reminders.StatusCode);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
     }
@@ -389,7 +391,7 @@ public sealed class ApiAccessTests
     }
 
     [Fact]
-    public async Task Admin_CanChangeOwnPassword()
+    public async Task Admin_CannotChangeOwnAccount()
     {
         var token = await LoginAsync(ApiFactory.SecondAdminUsername, ApiFactory.SecondAdminPassword);
         var selfId = await GetUserIdAsync(ApiFactory.SecondAdminUsername);
@@ -400,7 +402,7 @@ public sealed class ApiAccessTests
             token,
             new UpdateUserDto("(unchanged)", "Admin"));
 
-        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, update.StatusCode);
     }
 
     [Fact]

@@ -99,9 +99,9 @@ public sealed class AuthService
         var user = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
             ?? throw new NotFoundException($"Пользователь {id} не найден.");
 
-        if (user.Role == UserRole.Admin && user.Id != currentUserId)
+        if (user.Role == UserRole.Admin)
         {
-            throw new ForbiddenException("Изменение другого администратора запрещено.");
+            throw new ForbiddenException("Изменение администратора запрещено.");
         }
 
         if (role != user.Role)

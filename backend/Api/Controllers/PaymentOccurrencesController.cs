@@ -21,9 +21,14 @@ public sealed class PaymentOccurrencesController : ControllerBase
     [Authorize(Policy = "UserOrAdmin")]
     [ProducesResponseType<IReadOnlyList<PaymentOccurrenceResponseDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PaymentOccurrenceResponseDto>>> GetAll(
+        [FromQuery] bool? isPaid,
+        [FromQuery] bool? isOverdue,
+        [FromQuery] DateTime? dueBefore,
+        [FromQuery] DateTime? dueAfter,
         CancellationToken cancellationToken)
     {
-        var occurrences = await _paymentService.GetAllOccurrencesAsync(cancellationToken);
+        var filter = new OccurrenceFilterDto(isPaid, isOverdue, dueBefore, dueAfter);
+        var occurrences = await _paymentService.GetAllOccurrencesAsync(cancellationToken, filter);
         return Ok(occurrences);
     }
 

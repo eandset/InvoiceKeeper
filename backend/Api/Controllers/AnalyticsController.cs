@@ -6,24 +6,24 @@ using Microsoft.AspNetCore.Mvc;
 namespace InvoiceKeeper.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/payments")]
+[Route("api/v1/analytics")]
 [Authorize(Policy = "UserOrAdmin")]
-public sealed class PaymentsSummaryController : ControllerBase
+public sealed class AnalyticsController : ControllerBase
 {
     private readonly PaymentService _paymentService;
 
-    public PaymentsSummaryController(PaymentService paymentService)
+    public AnalyticsController(PaymentService paymentService)
     {
         _paymentService = paymentService;
     }
 
-    /// <summary>Итоговые суммы неоплаченных платежей по валютам.</summary>
-    [HttpGet("summary")]
-    [ProducesResponseType<PaymentSummaryDto>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<PaymentSummaryDto>> GetSummary(CancellationToken cancellationToken)
+    /// <summary>Список просроченных периодов.</summary>
+    [HttpGet("overdue")]
+    [ProducesResponseType<IReadOnlyList<PaymentOccurrenceResponseDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<PaymentOccurrenceResponseDto>>> GetOverdue(
+        CancellationToken cancellationToken)
     {
-        var summary = await _paymentService.GetSummaryAsync(cancellationToken);
-        return Ok(summary);
+        var overdue = await _paymentService.GetOverdueAsync(cancellationToken);
+        return Ok(overdue);
     }
 }
-
