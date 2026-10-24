@@ -37,5 +37,19 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.HasIndex(u => u.TelegramId)
+            .IsUnique()
+            .HasDatabaseName("ux_users_telegram_id");
+
+        builder.Property(u => u.TelegramId)
+            .HasColumnName("telegram_id");
+
+        builder.HasIndex(u => u.TelegramChatId)
+            .IsUnique()
+            .HasDatabaseName("ux_users_telegram_chat_id");
+
+        builder.Property(u => u.TelegramChatId)
+            .HasColumnName("telegram_chat_id");
     }
 }

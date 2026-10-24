@@ -31,6 +31,11 @@ services:
       Database__Name: ${POSTGRES_DB:-invoice_keeper}
       Database__Username: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, see .env.example}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env, see .env.example}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env, see .env.example}
+      BOT_SERVICE_TOKEN: ${BOT_SERVICE_TOKEN:?Set BOT_SERVICE_TOKEN in .env, see .env.example}
+      HttpsRedirection__Enabled: "false"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

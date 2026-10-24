@@ -38,12 +38,6 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("due_date");
 
-                    b.Property<bool>("IsPaid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_paid");
-
                     b.Property<Guid>("RecurringPaymentId")
                         .HasColumnType("uuid")
                         .HasColumnName("recurring_payment_id");
@@ -54,25 +48,31 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("reminder_sent");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Unpaid")
+                        .HasColumnName("status");
+
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DueDate")
                         .HasDatabaseName("idx_occurrences_due_date");
 
-                    b.HasIndex("IsPaid")
-                        .HasDatabaseName("idx_occurrences_is_paid");
-
-                    b.HasIndex("RecurringPaymentId");
-
                     b.HasIndex("ReminderSent")
                         .HasDatabaseName("idx_occurrences_reminder_sent")
                         .HasFilter("reminder_sent = FALSE");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("idx_occurrences_status");
+
+                    b.HasIndex("RecurringPaymentId", "DueDate")
+                        .IsUnique()
+                        .HasDatabaseName("ux_occurrences_payment_due_date");
 
                     b.ToTable("payment_occurrences", (string)null);
                 });
@@ -160,6 +160,14 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("role");
 
+                    b.Property<long?>("TelegramChatId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("telegram_chat_id");
+
+                    b.Property<long?>("TelegramId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("telegram_id");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -167,6 +175,14 @@ namespace Invoice_Keeper.Infrastructure.Data.Migrations
                         .HasColumnName("username");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TelegramChatId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_users_telegram_chat_id");
+
+                    b.HasIndex("TelegramId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_users_telegram_id");
 
                     b.HasIndex("Username")
                         .IsUnique();
