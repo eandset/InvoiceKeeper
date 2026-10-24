@@ -1,11 +1,4 @@
-"""Фоновые задачи (APScheduler): ежедневная рассылка напоминаний.
-
-Алгоритм по ТЗ:
-1. GET /api/v1/occurrences/reminders?leadDays=3 — периоды до срока ≤ 3 дней,
-   без дублей (reminder_sent), оплаченные не возвращаются бэкендом.
-2. Для каждого — сообщение в целевой чат TARGET_CHAT_ID.
-3. После успешной отправки — PATCH .../reminder-sent (защита от дублей).
-"""
+"""Фоновые задачи (APScheduler): ежедневная рассылка напоминаний."""
 from __future__ import annotations
 
 import logging
@@ -31,7 +24,7 @@ async def send_payment_reminders(bot: Bot) -> int:
         if not settings.bot_service_token:
             await api.login(settings.admin_username, settings.admin_password)
 
-        items = await api.get_reminders(lead_days=settings.reminder_lead_days)
+        items = await api.get_reminders(within_days=settings.reminder_lead_days)
         if not items:
             logger.info("Напоминаний нет")
             return 0
