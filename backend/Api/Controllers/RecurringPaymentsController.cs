@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace InvoiceKeeper.Api.Controllers;
 
 [Route("api/v1/recurring-payments")]
-[Authorize(Policy = "UserOrAdmin")]
 [ApiController]
 public sealed class RecurringPaymentsController : ControllerBase
 {
@@ -19,6 +18,7 @@ public sealed class RecurringPaymentsController : ControllerBase
 
     /// <summary>Список активных платежей с ближайшим неоплаченным периодом.</summary>
     [HttpGet]
+    [Authorize(Policy = "UserOrAdminOrService")]
     [ProducesResponseType<IReadOnlyList<PaymentResponseDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PaymentResponseDto>>> GetAll(CancellationToken cancellationToken)
     {
@@ -28,6 +28,7 @@ public sealed class RecurringPaymentsController : ControllerBase
 
     /// <summary>Активный платёж по идентификатору.</summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "UserOrAdmin")]
     [ProducesResponseType<PaymentResponseDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PaymentResponseDto>> GetById(Guid id, CancellationToken cancellationToken)
