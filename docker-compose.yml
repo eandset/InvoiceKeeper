@@ -41,7 +41,7 @@ services:
       BOT_SERVICE_TOKEN: ${BOT_SERVICE_TOKEN:?Set BOT_SERVICE_TOKEN in .env, see .env.example}
       HttpsRedirection__Enabled: "false"
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:?Set BACKEND_PORT in .env}:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -51,7 +51,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_BOT_URL=${VITE_BOT_URL:?Set VITE_BOT_URL in .env}
     restart: unless-stopped
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT:?Set BACKEND_PORT in .env}
     ports:
       - "80:80"
     depends_on:
@@ -65,7 +69,7 @@ services:
     restart: unless-stopped
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
-      - API_URL=http://backend:8080/api/v1
+      - API_URL=http://backend:${BACKEND_PORT:?Set BACKEND_PORT in .env}/api/v1
       - BOT_SERVICE_TOKEN=${BOT_SERVICE_TOKEN}
       - TARGET_CHAT_ID=${TARGET_CHAT_ID}
     depends_on:
