@@ -36,7 +36,16 @@ async function request(method, path, body) {
   }
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(text || `HTTP ${response.status}`)
+    let message = text
+    try {
+      const json = JSON.parse(text)
+      if (json.detail) message = json.detail
+      else if (json.title && json.status) message = `${json.title} (${json.status})`
+      else if (json.title) message = json.title
+    } catch {
+      // оставляем исходный текст
+    }
+    throw new Error(message || `HTTP ${response.status}`)
   }
   if (response.status === 204) {
     return null

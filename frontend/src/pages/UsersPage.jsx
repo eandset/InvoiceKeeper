@@ -74,9 +74,8 @@ export default function UsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Роль</label>
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600">
+              <select value="User" disabled className="rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600">
                 <option value="User">User</option>
-                <option value="Admin">Admin</option>
               </select>
             </div>
             <Button type="submit">Добавить</Button>
@@ -98,7 +97,7 @@ export default function UsersPage() {
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{u.username}</td>
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{u.role}</td>
                 <td className="px-4 py-3">
-                  {isAdmin && <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Удалить</button>}
+                  {isAdmin && u.role !== 'Admin' && <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Удалить</button>}
                 </td>
               </tr>
             ))}
