@@ -13,6 +13,12 @@ internal class PaymentMapper
         DateTime today)
     {
         var daysUntilDue = (occurrence.DueDate.Date - today.Date).Days;
+        
+        // Исправление: оплаченный платеж никогда не просрочен.
+        // Если статус Unpaid, но дата уже прошла (daysUntilDue < 0), он считается просроченным.
+        var isPaid = occurrence.Status == PaymentOccurrenceStatus.Paid;
+        var isOverdue = !isPaid && (occurrence.Status == PaymentOccurrenceStatus.Overdue || daysUntilDue < 0);
+
         return new PaymentOccurrenceResponseDto(
             occurrence.Id,
             occurrence.RecurringPaymentId,
@@ -22,7 +28,7 @@ internal class PaymentMapper
             occurrence.DueDate,
             occurrence.Status.ToString(),
             occurrence.ActualPaymentDate,
-            occurrence.Status == PaymentOccurrenceStatus.Overdue,
+            isOverdue,
             daysUntilDue);
     }
 
