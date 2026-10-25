@@ -3,22 +3,6 @@
 REST API для учёта регулярных платежей: аутентификация, управление пользователями,
 платежами и периодами оплаты, напоминания для Telegram-бота и аналитика.
 
-## Запуск
-
-```powershell
-Copy-Item .env.example .env    # задайте POSTGRES_PASSWORD, JWT_SECRET, ADMIN_PASSWORD, BOT_SERVICE_TOKEN
-docker compose up -d --build
-```
-
-Swagger UI: http://localhost:8080/swagger (или http://localhost:8080/api/v1/docs)
-
-Локально без Docker:
-
-```powershell
-docker compose up -d db
-dotnet run --project backend
-```
-
 ## Роли и аутентификация
 
 | Роль | Как получить токен | Возможности |
@@ -234,35 +218,3 @@ JWT не хранится на сервере, поэтому `logout` не от
 
 Ошибки валидации DTO возвращаются стандартным `ValidationProblemDetails` (`400`)
 с полем `errors`.
-
-## Переменные окружения
-
-| Переменная | Обязательна | Назначение |
-|---|---|---|
-| `POSTGRES_PASSWORD` | да | пароль PostgreSQL |
-| `ADMIN_USERNAME` | да | логин администратора при первом запуске |
-| `ADMIN_PASSWORD` | да | пароль администратора |
-| `JWT_SECRET` | да (вне Development) | ключ подписи JWT, минимум 32 символа |
-| `BOT_SERVICE_TOKEN` | да | сервисный токен бота |
-| `CORS_ALLOWED_ORIGINS` | нет | список источников через запятую для веб-клиента |
-| `HttpsRedirection__Enabled` | нет | `false`, если TLS завершается на proxy |
-
-## Тесты
-
-```powershell
-# все тесты; параметры PostgreSQL подхватываются из корневого .env
-dotnet test backend/tests/InvoiceKeeper.Tests.csproj
-
-# переопределить параметры подключения можно переменными окружения
-$env:POSTGRES_PASSWORD = "<пароль>"
-dotnet test backend/tests/InvoiceKeeper.Tests.csproj
-```
-
-Интеграционные тесты создают временную базу `invoice_keeper_test_<guid>`,
-применяют миграции и удаляют её после завершения.
-Параметры подключения берутся из переменных окружения `POSTGRES_*`, а при их
-отсутствии — из корневого `.env` (он загружается автоматически, как и в приложении).
-
-Отдельно проверяется матрица доступа к API (`backend/tests/Api`): реальный хост
-поднимается поверх временной БД, и запросы выполняются от имени `Admin`, `User`,
-сервисного клиента и без токена — ожидаются `401`/`403`/`404` для запрещённых операций.
