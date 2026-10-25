@@ -1,44 +1,120 @@
-# Invoice Keeper — Telegram-бот (aiogram 3)
+# Инструкция по установке и запуску Invoice Keeper Bot
 
-Микросервис уведомлений и быстрых команд. Взаимодействует с REST API бэкенда по /api/v1.
+Подробное руководство по локальной установке, настройке переменных окружения и запуску Telegram-бота.
 
-## Запуск
-`ash
+---
+
+## 📋 Требования
+
+Перед началом убедитесь, что у вас установлены:
+- **Python 3.10** или выше
+- **pip** (менеджер пакетов Python)
+- Доступ к запущенному API бэкенда (`Invoice Keeper API`)
+
+---
+
+## 🛠 Быстрый запуск (За 5 шагов)
+
+### Шаг 1. Клонирование / Переход в папку проекта
+
+Откройте терминал (или командную строку) и перейдите в папку с проектом бота:
+
+```bash
+cd tgbot/bot-aiogram
+```
+
+---
+
+### Шаг 2. Создание и активация виртуального окружения
+
+Создание изолированного окружения позволяет избежать конфликта зависимостей.
+
+- **На Linux / macOS:**
+  ```bash
+  python3 -m venv .venv
+  source .venv/bin/activate
+  ```
+
+- **На Windows (PowerShell):**
+  ```powershell
+  python -m venv .venv
+  .venv\Scripts\Activate.ps1
+  ```
+
+- **На Windows (CMD):**
+  ```cmd
+  python -m venv .venv
+  .venv\Scripts\activate.bat
+  ```
+
+---
+
+### Шаг 3. Установка зависимостей
+
+Установите все необходимые библиотеки из файла `requirements.txt`:
+
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
-copy .env.example .env  # заполнить BOT_TOKEN, API_URL, BOT_SERVICE_TOKEN, TARGET_CHAT_ID
+```
+
+---
+
+### Шаг 4. Настройка файла конфигурации `.env`
+
+В корневой директории проекта создайте файл `.env` на основе примера ниже.
+
+#### Обязательные параметры:
+- `BOT_TOKEN` — токен, полученный от [@BotFather](https://t.me/BotFather) в Telegram.
+- `API_URL` — базовый адрес бэкенд-сервиса (включая `/api/v1`).
+- `BOT_SERVICE_TOKEN` — сервисный ключ для заголовка `X-Service-Token` (должен совпадать с настройкой бэкенда).
+- `TARGET_CHAT_ID` — ID чата или группы, куда бот будет присылать фоновые уведомления и напоминания.
+
+#### Пример файла `.env`:
+
+```env
+# Обязательные параметры
+BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyZ
+API_URL=http://localhost:5164/api/v1
+BOT_SERVICE_TOKEN=your_secret_service_token_here
+TARGET_CHAT_ID=987654321
+
+# Настройки планировщика рассылок (необязательно, указаны значения по умолчанию)
+CRON_SCHEDULE_HOUR=9
+CRON_SCHEDULE_MINUTE=0
+REMINDER_LEAD_DAYS=3
+```
+
+> **Как узнать свой `TARGET_CHAT_ID`?**
+> Запустите бота без указания этого параметра, отправьте команду `/start` боту в личные сообщения или добавьте его в группу — бот пришлет текущий `chat_id`.
+
+---
+
+### Шаг 5. Запуск бота
+
+Убедитесь, что виртуальное окружение активировано, и запустите главный скрипт:
+
+```bash
 python main.py
-`
+```
 
-## Переменные (.env)
-BOT_TOKEN            — токен Telegram-бота (обязательно)
-API_URL              — базовый URL API, например http://localhost:5080/api/v1
-BOT_SERVICE_TOKEN    — сервисный токен для API (заголовок X-Service-Token)
-TARGET_CHAT_ID       — чат/канал для напоминаний (узнать: /start в боте)
-CRON_SCHEDULE_HOUR/MINUTE — время ежедневной проверки (по умолчанию 09:00)
-REMINDER_LEAD_DAYS   — за сколько дней напоминать (по умолчанию 3)
+При успешном запуске в консоли появятся логи вида:
 
-## Команды
-/start      — приветствие, chat_id и статус API
-/occurrences — список всех периодов оплаты
-/payments    — список регулярных платежей
-/summary     — итоги по валютам (RUB/USD/EUR)
-/overdue     — просроченные периоды
-/reminders   — получить актуальные напоминания сейчас
-/help        — справка
+```text
+INFO:invoice-keeper-bot:Планировщик запущен: ежедневно в 09:00, lead=3 дн.; проверка новых платежей каждые 3 мин.
+INFO:invoice-keeper-bot:Бот запущен (long polling)
+```
 
-## Логика напоминаний
-1. Ежедневно в CRON_SCHEDULE_HOUR бот запрашивает
-   GET /api/v1/payment-occurrences/reminders?withinDays=3
-2. Для каждого периода отправляет сообщение в TARGET_CHAT_ID.
-3. После успешной отправки вызывает
-   PATCH /api/v1/payment-occurrences/{id}/reminder-sent
-   — дублей нет, оплаченные периоды не тревожатся.
+---
 
-## Структура
-  main.py                — Bot + Dispatcher + APScheduler
-  config.py              — pydantic-settings, .env
-  services/api_client.py — aiohttp-клиент к /api/v1 (X-Service-Token)
-  services/formatting.py — HTML-сообщения
-  handlers/commands.py   — /start /occurrences /payments /summary /overdue /reminders /help
-  handlers/errors.py     — глобальные ошибки
-  scheduler/jobs.py      — ежедневная рассылка
+## 🔍 Проверка работоспособности
+
+1. Откройте Telegram и найдите вашего бота.
+2. Отправьте команду `/start`.
+3. Бот должен вернуть сообщение со статусом подключения к API (`✅ API доступен`) и вашим `chat_id`.
+
+---
+
+## 🛑 Остановка бота
+
+Чтобы остановить работу бота, нажмите сочетание клавиш **`Ctrl + C`** в окне терминала, где запущен скрипт.
