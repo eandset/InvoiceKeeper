@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Card, Button } from '../components/ui'
+import { useToast } from '../hooks/useToast'
 
 export default function PaymentNewPage() {
   const navigate = useNavigate()
+  const { addToast } = useToast()
   const [form, setForm] = useState({
     title: '',
     amount: '',
@@ -47,6 +49,10 @@ export default function PaymentNewPage() {
         nextPaymentDate: form.nextPaymentDate,
         periodicity: form.periodicity
       })
+      addToast(
+        'Платёж успешно создан! Ожидайте уведомление о новом платеже в Telegram-боте в течение 2-7 минут.',
+        'success'
+      )
       navigate('/payments')
     } catch (err) {
       setError(err.message || 'Не удалось создать платёж')
