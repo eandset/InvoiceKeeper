@@ -44,7 +44,7 @@ export default function Occurrences() {
     setBusyId(occurrence.id);
     setError('');
     try {
-      await api.setOccurrenceStatus(occurrence.id, paid ? 'Unpaid' : 'Paid');
+      await api.setOccurrenceStatus(occurrence.id, !paid);
       setItems((await api.occurrences()) || []);
     } catch (err) {
       setError(err.message);
