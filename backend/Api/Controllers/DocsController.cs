@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InvoiceKeeper.Api.Controllers;
 
-/// <summary>Редирект на Swagger UI (канонический путь по api.md).</summary>
+/// <summary>Редирект на Swagger UI.</summary>
 [ApiController]
 [Route("api/v1/docs")]
 [AllowAnonymous]
