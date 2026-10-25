@@ -1,6 +1,6 @@
 # Invoice Keeper — Frontend
 
-Простой фронтенд на React + Vite + Tailwind CSS.
+Фронтенд на React + Vite + Tailwind CSS.
 
 ## Установка и запуск
 
@@ -33,3 +33,13 @@ npm run dev
 ## Темы
 
 Тёмная/светлая тема переключается кнопкой в навбаре. Состояние сохраняется в `localStorage`.
+
+## Переменные окружения
+
+Создайте .env на основе .env.example:
+
+```bash
+cp .env.example .env
+```
+- VITE_BOT_URL — ссылка на Telegram-бот, отображается в боковом меню.
+
