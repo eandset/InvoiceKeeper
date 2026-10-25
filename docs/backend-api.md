@@ -23,8 +23,8 @@ dotnet run --project backend
 
 | Роль | Как получить токен | Возможности |
 |---|---|---|
-| `Admin` | `POST /api/v1/auth/login` | полный CRUD платежей, создание пользователей, мягкое удаление |
-| `User` | учётная запись, созданная администратором | просмотр платежей и аналитики, отметка оплаты |
+| `Admin` | `POST /api/v1/auth/login` | полный CRUD платежей, управление пользователями, ручной пересчёт просрочек |
+| `User` | учётная запись, созданная администратором | просмотр платежей, периодов и аналитики, отметка оплаты |
 | `Service` (бот) | заголовок `X-Service-Token` | выборка напоминаний и отметка об отправке |
 
 JWT передаётся в заголовке `Authorization: Bearer <token>`.
@@ -32,6 +32,15 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 
 Администратор создаётся при старте, если заданы `ADMIN_USERNAME` и `ADMIN_PASSWORD`
 (или `AdminSeed:*` в конфигурации). Повторный запуск не создаёт дубликат.
+
+Политики авторизации, используемые в контроллерах:
+
+| Политика | Кто проходит |
+|---|---|
+| `UserOrAdmin` | `User`, `Admin` |
+| `UserOrAdminOrService` | `User`, `Admin`, `Service` |
+| `ServiceOrAdmin` | `Service`, `Admin` |
+| `AdminOnly` | только `Admin` |
 
 ## Эндпоинты
 
@@ -49,24 +58,26 @@ JWT передаётся в заголовке `Authorization: Bearer <token>`.
 { "token": "<jwt>", "username": "admin", "role": "Admin" }
 ```
 
-| Метод | Путь | Роль | Описание |
+| Метод | Путь | Политика | Описание |
 |---|---|---|---|
 | `POST` | `/api/v1/auth/login` | анонимно | вход по логину и паролю |
-| `GET` | `/api/v1/auth/me` | User/Admin | профиль текущего пользователя |
-| `POST` | `/api/v1/auth/logout` | User/Admin | завершение сессии (`204`) |
+| `GET` | `/api/v1/auth/me` | UserOrAdmin | профиль текущего пользователя |
+| `POST` | `/api/v1/auth/logout` | UserOrAdmin | завершение сессии (`204`) |
 
 JWT не хранится на сервере, поэтому `logout` не отзывает токен: клиент должен
 удалить его у себя. До истечения срока действия токен остаётся валидным.
 
 ### Пользователи
 
-| Метод | Путь | Роль | Описание |
-|---|---|---|---|
-| `GET` | `/api/v1/users` | Admin | список пользователей |
-| `GET` | `/api/v1/users/{id}` | Admin | пользователь по идентификатору |
-| `POST` | `/api/v1/users` | Admin | создание пользователя |
-| `PATCH` | `/api/v1/users/{id}` | Admin | изменение роли и/или пароля |
-| `DELETE` | `/api/v1/users/{id}` | Admin | удаление пользователя (`204`) |
+Все эндпоинты контроллера защищены политикой `AdminOnly`.
+
+| Метод | Путь | Описание |
+|---|---|---|
+| `GET` | `/api/v1/users` | список пользователей |
+| `GET` | `/api/v1/users/{id}` | пользователь по идентификатору |
+| `POST` | `/api/v1/users` | создание пользователя |
+| `PATCH` | `/api/v1/users/{id}` | изменение пользователя |
+| `DELETE` | `/api/v1/users/{id}` | удаление пользователя (`204`) |
 
 ```json
 { "username": "ivan", "password": "minimum-8-chars", "role": "User" }
@@ -78,9 +89,9 @@ JWT не хранится на сервере, поэтому `logout` не от
 
 Правила управления пользователями:
 
-- `POST /api/v1/users` создаёт **только** пользователей с ролью `User`; попытка
-  создать `Admin` возвращает `403`.
-- `PATCH /api/v1/users/{id}` меняет только пароль. Смена роли запрещена (`403`);
+- `POST /api/v1/users` создаёт пользователей; при попытке создать `Admin`
+  возвращается `403`.
+- `PATCH /api/v1/users/{id}` меняет пароль. Смена роли запрещена (`403`);
   значение `"(unchanged)"` (или пустая строка) сохраняет текущий пароль.
 - Изменять и удалять **другого** администратора нельзя (`403`). Себя администратор
   может изменить (например, сменить себе пароль).
@@ -90,12 +101,12 @@ JWT не хранится на сервере, поэтому `logout` не от
 
 ### Платежи
 
-| Метод | Путь | Роль | Описание |
+| Метод | Путь | Политика | Описание |
 |---|---|---|---|
-| `GET` | `/api/v1/recurring-payments` | User/Admin | активные платежи + ближайший неоплаченный период |
-| `GET` | `/api/v1/recurring-payments/{id}` | User/Admin | один активный платёж |
-| `POST` | `/api/v1/recurring-payments` | Admin | создание платежа и первого периода |
-| `DELETE` | `/api/v1/recurring-payments/{id}` | Admin | мягкое удаление (`isDeleted = true`) |
+| `GET` | `/api/v1/recurring-payments` | UserOrAdminOrService | активные платежи + ближайший неоплаченный период |
+| `GET` | `/api/v1/recurring-payments/{id}` | UserOrAdmin | один активный платёж |
+| `POST` | `/api/v1/recurring-payments` | AdminOnly | создание платежа и первого периода |
+| `DELETE` | `/api/v1/recurring-payments/{id}` | AdminOnly | мягкое удаление (`isDeleted = true`) |
 
 ```json
 {
@@ -116,11 +127,20 @@ JWT не хранится на сервере, поэтому `logout` не от
 
 ### Периоды оплаты
 
-| Метод | Путь | Роль | Описание |
+| Метод | Путь | Политика | Описание |
 |---|---|---|---|
-| `GET` | `/api/v1/payment-occurrences` | User/Admin | все периоды: оплаченные, ожидаемые и просроченные |
-| `GET` | `/api/v1/payment-occurrences/{id}` | User/Admin | конкретный период |
-| `PATCH` | `/api/v1/payment-occurrences/{id}` | User/Admin | подтверждение/отмена оплаты и фактическая дата |
+| `GET` | `/api/v1/payment-occurrences` | UserOrAdminOrService | все периоды с фильтрами |
+| `GET` | `/api/v1/payment-occurrences/{id}` | UserOrAdmin | конкретный период |
+| `PATCH` | `/api/v1/payment-occurrences/{id}` | UserOrAdmin | подтверждение/отмена оплаты и фактическая дата |
+
+`GET /api/v1/payment-occurrences` поддерживает query-параметры:
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `isPaid` | `bool?` | фильтр по признаку оплаты |
+| `isOverdue` | `bool?` | фильтр по признаку просрочки |
+| `dueBefore` | `DateTime?` | срок не позже указанной даты |
+| `dueAfter` | `DateTime?` | срок не раньше указанной даты |
 
 `PATCH /api/v1/payment-occurrences/{id}`
 
@@ -136,12 +156,15 @@ JWT не хранится на сервере, поэтому `logout` не от
 
 ### Интеграция с Telegram-ботом
 
-Заголовок: `X-Service-Token: <BOT_SERVICE_TOKEN>`.
+Заголовок: `X-Service-Token: <BOT_SERVICE_TOKEN>` (политика `ServiceOrAdmin`).
 
 | Метод | Путь | Описание |
 |---|---|---|
-| `GET` | `/api/v1/payment-occurrences/reminders?withinDays=3` | неоплаченные периоды без отправленного напоминания со сроком не позже `today + withinDays` |
+| `GET` | `/api/v1/payment-occurrences/reminders?withinDays=3&telegramChatId=<id>` | неоплаченные периоды без отправленного напоминания со сроком не позже `today + withinDays` |
 | `PATCH` | `/api/v1/payment-occurrences/{id}/reminder-sent` | отметить напоминание отправленным (`204`) |
+
+`withinDays` ограничен диапазоном `0..30`; по умолчанию `3`.
+Необязательный `telegramChatId` ограничивает выборку периодами конкретного чата.
 
 Элемент ответа:
 
@@ -158,11 +181,14 @@ JWT не хранится на сервере, поэтому `logout` не от
 }
 ```
 
-`withinDays` ограничен диапазоном `0..30`; по умолчанию `3`.
-
 ### Аналитика
 
-`GET /api/v1/payments/summary` (User/Admin)
+| Метод | Путь | Политика | Описание |
+|---|---|---|---|
+| `GET` | `/api/v1/payments/summary` | UserOrAdminOrService | итоговые суммы неоплаченных платежей по валютам |
+| `GET` | `/api/v1/analytics/overdue` | UserOrAdminOrService | список просроченных периодов |
+
+`GET /api/v1/payments/summary`
 
 ```json
 {
@@ -177,9 +203,21 @@ JWT не хранится на сервере, поэтому `logout` не от
 Суммируются неоплаченные периоды активных платежей. `overdueCount` — количество
 таких периодов с `dueDate` в прошлом.
 
-### Документация
+`GET /api/v1/analytics/overdue` возвращает `IReadOnlyList<PaymentOccurrenceResponseDto>`
+— те же DTO периодов, что и в `/api/v1/payment-occurrences`.
 
-`GET /api/v1/docs` — редирект (`302`) на `/swagger/index.html`. Доступен без токена.
+### Пересчёт просрочек
+
+| Метод | Путь | Политика | Описание |
+|---|---|---|---|
+| `POST` | `/api/v1/payment-occurrences/recalculate-overdue` | AdminOnly | ручной пересчёт просроченных периодов, возвращает число обновлённых записей |
+
+### Служебные эндпоинты
+
+| Метод | Путь | Политика | Описание |
+|---|---|---|---|
+| `GET` | `/api/v1/health` | анонимно | проверка доступности API (`{ "status": "ok" }`) |
+| `GET` | `/api/v1/docs` | анонимно | редирект (`302`) на `/swagger/index.html` |
 
 ## Ошибки
 
@@ -228,4 +266,3 @@ dotnet test backend/tests/InvoiceKeeper.Tests.csproj
 Отдельно проверяется матрица доступа к API (`backend/tests/Api`): реальный хост
 поднимается поверх временной БД, и запросы выполняются от имени `Admin`, `User`,
 сервисного клиента и без токена — ожидаются `401`/`403`/`404` для запрещённых операций.
-
