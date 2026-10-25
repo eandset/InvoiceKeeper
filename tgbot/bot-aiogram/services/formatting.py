@@ -51,11 +51,18 @@ def occurrence_line(item: dict) -> str:
     title = escape(str(item.get("title", "")))
     amount = _fmt_amount(item.get("amount", 0), item.get("currency", ""))
     days = int(item.get("daysUntilDue", 0))
-    due = _due_text(str(item.get("dueDate", "")), days)
-    status = item.get("status", "")
-    icon = {"paid": "+", "overdue": "!"}.get(status, "-")
-    return f"{icon} <b>{title}</b> - {amount}\n   срок: {due}"
+    status = str(item.get("status", "")).lower()
+    is_overdue = bool(item.get("isOverdue", False))
 
+    # Если платеж оплачен, принудительно показываем статус "оплачено" без дней просрочки
+    if status == "paid":
+        due = f"{str(item.get('dueDate', ''))[:10]} (оплачено)"
+        icon = "+"
+    else:
+        due = _due_text(str(item.get("dueDate", "")), days)
+        icon = "!" if is_overdue or days < 0 else "-"
+
+    return f"{icon} <b>{title}</b> - {amount}\n   срок: {due}"
 
 def payment_line(item: dict) -> str:
     """Строка для регулярного платежа."""
