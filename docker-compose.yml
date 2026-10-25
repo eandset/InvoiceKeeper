@@ -1,4 +1,7 @@
+version: '3.8'
+
 services:
+  # 1. База данных
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -17,6 +20,7 @@ services:
       retries: 10
       start_period: 10s
 
+  # 2. Бэкенд (.NET 10)
   backend:
     build:
       context: .
@@ -37,10 +41,39 @@ services:
       BOT_SERVICE_TOKEN: ${BOT_SERVICE_TOKEN:?Set BOT_SERVICE_TOKEN in .env, see .env.example}
       HttpsRedirection__Enabled: "false"
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:?Set BACKEND_PORT in .env}:8080"
     depends_on:
       db:
         condition: service_healthy
+
+  # 3. Фронтенд (React + Vite / Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_BOT_URL=${VITE_BOT_URL:?Set VITE_BOT_URL in .env}
+    restart: unless-stopped
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT:?Set BACKEND_PORT in .env}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # 4. Telegram Бот (Python)
+  tgbot:
+    build:
+      context: ./tgbot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - API_URL=http://backend:${BACKEND_PORT:?Set BACKEND_PORT in .env}/api/v1
+      - BOT_SERVICE_TOKEN=${BOT_SERVICE_TOKEN}
+      - TARGET_CHAT_ID=${TARGET_CHAT_ID}
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
