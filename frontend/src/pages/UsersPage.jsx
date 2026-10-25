@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import { Card, Button } from '../components/ui'
 
 export default function UsersPage() {
   const { isAdmin } = useAuth()
@@ -8,6 +9,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ username: '', password: '', role: 'User' })
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     load()
@@ -20,8 +22,18 @@ export default function UsersPage() {
       .finally(() => setLoading(false))
   }
 
+  const validate = () => {
+    const newErrors = {}
+    if (!form.username.trim()) newErrors.username = 'Введите логин'
+    if (!form.password) newErrors.password = 'Введите пароль'
+    else if (form.password.length < 4) newErrors.password = 'Минимум 4 символа'
+    setFormErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleCreate = async (e) => {
     e.preventDefault()
+    if (!validate()) return
     try {
       await api.createUser(form)
       setForm({ username: '', password: '', role: 'User' })
@@ -41,48 +53,52 @@ export default function UsersPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Загрузка...</div>
+  if (loading) return <div className="text-gray-500 dark:text-gray-400">Загрузка...</div>
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Пользователи</h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Пользователи</h1>
+      {error && <p className="text-red-500">{error}</p>}
       {isAdmin && (
-        <form onSubmit={handleCreate} className="mb-6 flex gap-2 items-end bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400">Логин</label>
-            <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required className="rounded border px-2 py-1 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400">Пароль</label>
-            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required className="rounded border px-2 py-1 dark:bg-gray-700 dark:text-white dark:border-gray-600" />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400">Роль</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="rounded border px-2 py-1 dark:bg-gray-700 dark:text-white dark:border-gray-600">
-              <option value="User">User</option>
-              <option value="Admin">Admin</option>
-            </select>
-          </div>
-          <button className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Добавить</button>
-        </form>
+        <Card>
+          <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Логин</label>
+              <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className={`rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white ${formErrors.username ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`} />
+              {formErrors.username && <p className="text-red-500 text-xs mt-1">{formErrors.username}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Пароль</label>
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={`rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white ${formErrors.password ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`} />
+              {formErrors.password && <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Роль</label>
+              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="rounded-lg border px-3 py-2 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600">
+                <option value="User">User</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <Button type="submit">Добавить</Button>
+          </form>
+        </Card>
       )}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <Card>
         <table className="min-w-full">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+          <thead className="bg-stone-50 dark:bg-gray-700">
             <tr>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Логин</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Роль</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Действия</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"></th>
             </tr>
           </thead>
           <tbody className="divide-y dark:divide-gray-700">
             {users.map((u) => (
-              <tr key={u.id}>
+              <tr key={u.id} className="hover:bg-stone-50 dark:hover:bg-gray-700/50">
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{u.username}</td>
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{u.role}</td>
                 <td className="px-4 py-3">
-                  {isAdmin && <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800 text-sm">Удалить</button>}
+                  {isAdmin && <button onClick={() => handleDelete(u.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Удалить</button>}
                 </td>
               </tr>
             ))}
@@ -93,7 +109,7 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   )
 }

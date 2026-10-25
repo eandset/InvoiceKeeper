@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
+import { Card, Button } from '../components/ui'
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([])
@@ -24,40 +25,33 @@ export default function PaymentsPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Загрузка...</div>
+  if (loading) return <div className="p-8 text-gray-500 dark:text-gray-400">Загрузка...</div>
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Регулярные платежи</h1>
-        <Link to="/payments/new" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Добавить</Link>
+        <Link to="/payments/new" className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-medium">+ Новый платёж</Link>
       </div>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      {error && <p className="text-red-500">{error}</p>}
+      <Card>
         <table className="min-w-full">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+          <thead className="bg-stone-50 dark:bg-gray-700">
             <tr>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Название</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Сумма</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Следующий</th>
-              <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">Действия</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"></th>
             </tr>
           </thead>
           <tbody className="divide-y dark:divide-gray-700">
             {payments.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className="hover:bg-stone-50 dark:hover:bg-gray-700/50">
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{p.title}</td>
                 <td className="px-4 py-3 text-gray-900 dark:text-white">{p.amount} {p.currency}</td>
-                <td className="px-4 py-3 text-gray-900 dark:text-white">
-                  {p.nextPaymentDate ? new Date(p.nextPaymentDate).toLocaleDateString() : '-'}
-                </td>
+                <td className="px-4 py-3 text-gray-900 dark:text-white">{p.nextPaymentDate ? new Date(p.nextPaymentDate).toLocaleDateString() : '-'}</td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Удалить
-                  </button>
+                  <button onClick={() => handleDelete(p.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Удалить</button>
                 </td>
               </tr>
             ))}
@@ -68,7 +62,7 @@ export default function PaymentsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   )
 }

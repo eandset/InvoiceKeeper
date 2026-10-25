@@ -1,44 +1,26 @@
-import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
+import { Link } from 'react-router-dom'
+import Sidebar from './layout/Sidebar'
 
 export default function Layout({ children }) {
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout } = useAuth()
   const { theme, toggle } = useTheme()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-6">
-              <Link to="/" className="font-bold text-xl text-gray-900 dark:text-white">Invoice Keeper</Link>
-              {user && (
-                <>
-                  <Link to="/payments" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Платежи</Link>
-                  <Link to="/occurrences" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Периоды</Link>
-                  <Link to="/overdue" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Просрочка</Link>
-                  {isAdmin && <Link to="/users" className="text-gray-700 dark:text-gray-300 hover:text-blue-600">Пользователи</Link>}
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              <button onClick={toggle} className="text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600">
-                {theme === 'dark' ? 'Светло' : 'Темно'}
-              </button>
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{user.username}</span>
-                  <button onClick={logout} className="text-sm text-red-600 hover:text-red-800">Выйти</button>
-                </div>
-              ) : (
-                <Link to="/login" className="text-sm text-blue-600 hover:text-blue-800">Войти</Link>
-              )}
-            </div>
+    <div className="min-h-screen bg-stone-50 dark:bg-gray-900 flex">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="md:hidden bg-emerald-900 dark:bg-gray-900 text-white px-4 py-4 flex justify-between items-center sticky top-0 z-10">
+          <Link to="/" className="text-lg font-bold">Invoice Keeper</Link>
+          <div className="flex items-center gap-3">
+            <button onClick={toggle} className="text-xl">{theme === 'dark' ? '☀️' : '🌙'}</button>
+            {user && <button onClick={logout} className="text-sm underline">Выйти</button>}
           </div>
-        </div>
-      </nav>
-      <main>{children}</main>
+        </header>
+        <main className="flex-1 p-4 md:p-8 overflow-auto">{children}</main>
+      </div>
     </div>
   )
 }
+
