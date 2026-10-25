@@ -61,9 +61,18 @@ async def cmd_occurrences(message: Message) -> None:
         if not items:
             await message.answer("✅ Периодов оплаты нет.")
             return
-        items = sorted(items, key=lambda i: i.get("dueDate", ""))[:15]
+
+        # Сортируем по дате от ранних к поздним (A->Z) и берем первые 10
+        items = sorted(items, key=lambda i: i.get("dueDate", ""))
+        limited_items = items[:10]
+
         lines = ["<b>Периоды оплаты</b>\n"]
-        lines += [occurrence_line(i) for i in items]
+        lines += [occurrence_line(i) for i in limited_items]
+
+        # Добавляем многоточие в конец, если записей больше 10
+        if len(items) > 10:
+            lines.append("...")
+
         await message.answer("\n\n".join(lines), parse_mode="HTML")
     except ApiError as e:
         await message.answer(f"Ошибка API: {e.status}")
