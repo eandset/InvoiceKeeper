@@ -1,7 +1,7 @@
 # Invoice Keeper — Frontend (React + Vite)
 
-Отдельный SPA-клиент к API Invoice Keeper. Бэкенд живёт в `../backend` и отдаёт JSON
-по `/api/v1/*`. В production-сборке (`dist/`) бэкенд сам раздаёт этот фронтенд.
+SPA-клиент к API Invoice Keeper. Бэкенд живёт в `../backend` и отдаёт JSON
+по `/api/v1/*`.
 
 ## Стек
 
@@ -27,22 +27,13 @@ $env:VITE_API_TARGET='http://localhost:8080'
 npm run dev
 ```
 
-Бэкенд при этом должен быть уже запущен:
-
-```powershell
-cd ..\backend
-$env:POSTGRES_PASSWORD='<ваш пароль из .env>'
-dotnet run
-```
-
 ## Production-сборка
 
 ```bash
 npm run build
 ```
 
-Результат — папка `dist/`. Бэкенд ищет её по пути `../frontend/dist` и автоматически
-раздаёт как SPA (включая клиентские маршруты `/app`, `/login` и т.д.).
+Результат — папка `dist/`. Её раздаёт nginx из `Dockerfile` (образ фронтенда в `docker-compose.yml`).
 
 Альтернатива — любой статический хостинг с SPA-fallback на `index.html`.
 
@@ -52,20 +43,24 @@ npm run build
 admin / admin123
 ```
 
-Учётная запись создаётся бэкендом при первом старте (раздел `AdminSeed` в `appsettings.json`).
+Учётная запись создаётся бэкендом при первом старте (`ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 
 ## Маршруты
 
 | Путь | Доступ | Назначение |
 | --- | --- | --- |
-| `/` | все | Рекламный лендинг |
+| `/` | все | Лендинг |
 | `/login` | все | Вход (JWT) |
+| `/docs` | все | Ссылки на Swagger и ключевые эндпоинты |
 | `/app` | авторизованные | Обзор: суммы, ближайшие и просроченные периоды |
 | `/app/occurrences` | авторизованные | Периоды: фильтры, отметка оплаты |
 | `/app/payments` | авторизованные | Реестр регулярных платежей |
 | `/app/payments/new` | только Admin | Создание платежа |
 | `/app/analytics` | авторизованные | Аналитика по валютам и статусам |
 | `/app/users` | только Admin | Пользователи и роли |
+
+Старые адреса (`/dashboard`, `/payments`, `/payments/new`, `/occurrences`, `/overdue`, `/users`)
+перенаправляются на соответствующие `/app/*`-маршруты.
 
 ## Темы и акценты
 
@@ -96,11 +91,11 @@ frontend/
 │   ├── lib/              # api.js, format.js, theme.js
 │   ├── pages/            # Landing, Login, Dashboard, …
 │   └── styles/           # tokens, base, layout, components, landing, app, pixel
-└── dist/                 # готовая production-сборка
+└── dist/                 # production-сборка
 ```
 
 ## Авторизация
 
 JWT хранится в `localStorage` (`ik-token`), пользователь — в `ik-user`.
 Все запросы идут с `Authorization: Bearer <token>`. При `401` сессия очищается,
-пользователь возвращается на `/login`.
+событие `ik-session-change` разлогинивает интерфейс и возвращает на `/login`.

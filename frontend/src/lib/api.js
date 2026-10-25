@@ -1,91 +1,95 @@
-const API_BASE = '/api/v1'
+const TOKEN_KEY = 'ik-token';
+const USER_KEY = 'ik-user';
 
-function getToken() {
-  return localStorage.getItem('token')
-}
-
-function authHeaders() {
-  const token = getToken()
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+export function readSession() {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(USER_KEY);
+    if (!token) return null;
+    return { token, user: raw ? JSON.parse(raw) : null };
+  } catch {
+    return null;
   }
 }
 
-async function request(method, path, body) {
-  const url = `${API_BASE}${path}`
-  const options = {
+export function saveSession(token, username, role) {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify({ username, role }));
+}
+
+export function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+export class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function notifySessionChange() {
+  window.dispatchEvent(new Event('ik-session-change'));
+}
+
+async function request(path, { method = 'GET', body, auth = true } = {}) {
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  if (auth) {
+    const session = readSession();
+    if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+  }
+
+  const response = await fetch(`/api/v1${path}`, {
     method,
-    headers: authHeaders()
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+
+  if (response.status === 401 && auth) {
+    clearSession();
+    notifySessionChange();
   }
-  if (body !== undefined) {
-    options.body = JSON.stringify(body)
-  }
-  const response = await fetch(url, options)
-  if (response.status === 401) {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
-  if (response.status === 403) {
-    throw new Error('Forbidden')
-  }
-  if (response.status === 404) {
-    throw new Error('NotFound')
-  }
+
   if (!response.ok) {
-    const text = await response.text()
-    let message = text
+    let message = `Ошибка запроса (${response.status})`;
     try {
-      const json = JSON.parse(text)
-      if (json.detail) message = json.detail
-      else if (json.title && json.status) message = `${json.title} (${json.status})`
-      else if (json.title) message = json.title
+      const problem = await response.json();
+      message = problem.detail || problem.title || message;
     } catch {
-      // оставляем исходный текст
+      /* тело не JSON — оставляем общий текст */
     }
-    throw new Error(message || `HTTP ${response.status}`)
+    throw new ApiError(response.status, message);
   }
-  if (response.status === 204) {
-    return null
-  }
-  return response.json()
+
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export const api = {
-  login: (username, password) => request('POST', '/auth/login', { username, password }),
-  me: () => request('GET', '/auth/me'),
-  logout: () => request('POST', '/auth/logout'),
+  login: (username, password) =>
+    request('/auth/login', { method: 'POST', body: { username, password }, auth: false }),
 
-  health: () => request('GET', '/health'),
+  me: () => request('/auth/me'),
+  logout: () => request('/auth/logout', { method: 'POST' }),
 
-  getPayments: () => request('GET', '/recurring-payments'),
-  getPayment: (id) => request('GET', `/recurring-payments/${id}`),
-  createPayment: (data) => request('POST', '/recurring-payments', data),
-  deletePayment: (id) => request('DELETE', `/recurring-payments/${id}`),
+  summary: () => request('/payments/summary'),
+  occurrences: () => request('/payment-occurrences'),
+  payments: () => request('/recurring-payments'),
+  users: () => request('/users'),
 
-  getOccurrences: (params) => {
-    const query = new URLSearchParams()
-    if (params) {
-      if (params.isPaid !== undefined) query.append('isPaid', params.isPaid)
-      if (params.isOverdue !== undefined) query.append('isOverdue', params.isOverdue)
-      if (params.dueBefore) query.append('dueBefore', params.dueBefore)
-      if (params.dueAfter) query.append('dueAfter', params.dueAfter)
-    }
-    const qs = query.toString()
-    return request('GET', `/payment-occurrences${qs ? '?' + qs : ''}`)
-  },
-  getOccurrence: (id) => request('GET', `/payment-occurrences/${id}`),
-  updateOccurrence: (id, data) => request('PATCH', `/payment-occurrences/${id}`, data),
+  setOccurrenceStatus: (id, isPaid, actualPaymentDate = null) =>
+    request(`/payment-occurrences/${id}`, {
+      method: 'PATCH',
+      body: { isPaid, actualPaymentDate }
+    }),
 
-  getSummary: () => request('GET', '/payments/summary'),
-  getOverdue: () => request('GET', '/analytics/overdue'),
-  recalculateOverdue: () => request('POST', '/payment-occurrences/recalculate-overdue'),
-
-  getUsers: () => request('GET', '/users'),
-  getUser: (id) => request('GET', `/users/${id}`),
-  createUser: (data) => request('POST', '/users', data),
-  updateUser: (id, data) => request('PATCH', `/users/${id}`, data),
-  deleteUser: (id) => request('DELETE', `/users/${id}`)
-}
+  createPayment: (payload) => request('/recurring-payments', { method: 'POST', body: payload }),
+  deletePayment: (id) => request(`/recurring-payments/${id}`, { method: 'DELETE' }),
+  createUser: (payload) => request('/users', { method: 'POST', body: payload }),
+  deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+  updateUser: (id, payload) => request(`/users/${id}`, { method: 'PATCH', body: payload })
+};
