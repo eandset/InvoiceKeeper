@@ -1,0 +1,84 @@
+/* ============================================================
+   Invoice Keeper — Editorial Dark UI
+   Заголовки: TD Mars · Текст: TT Inters
+   Темы и акценты переключаются через CSS-переменные.
+   ============================================================ */
+
+:root {
+  --font-display: "TD Mars", "TT Inters", "Georgia", serif;
+  --font-body: "TT Inters", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "TT Inters", "Consolas", ui-monospace, monospace;
+
+  --bg: #060607;
+  --bg-elev: #0b0b0d;
+  --bg-panel: #101014;
+  --bg-card: rgba(16, 16, 20, 0.72);
+  --bg-card-hover: rgba(24, 24, 29, 0.86);
+  --border: rgba(255, 255, 255, 0.075);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f4f4f6;
+  --text-muted: #8d8d97;
+  --text-faint: #5b5b66;
+
+  --accent: #ff3b3b;
+  --accent-2: #ff6b6b;
+  --accent-soft: rgba(255, 59, 59, 0.16);
+  --accent-glow: rgba(255, 59, 59, 0.34);
+
+  --success: #2dd4a0;
+  --success-soft: rgba(45, 212, 160, 0.14);
+  --danger: #ff4d5e;
+  --danger-soft: rgba(255, 77, 94, 0.14);
+  --warn: #f5a524;
+  --warn-soft: rgba(245, 165, 36, 0.14);
+
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 34px;
+
+  --topbar-h: 74px;
+  --page-max: 1240px;
+  --glow-blur: 90px;
+}
+
+[data-theme="noctra"] {
+  --bg: #050508;
+  --bg-elev: #0a0a10;
+  --bg-panel: #101018;
+  --bg-card: rgba(16, 16, 26, 0.74);
+  --bg-card-hover: rgba(24, 24, 38, 0.88);
+  --border: rgba(150, 150, 255, 0.09);
+  --border-strong: rgba(150, 150, 255, 0.2);
+}
+
+[data-theme="emerald"] {
+  --bg: #030807;
+  --bg-elev: #060d0c;
+  --bg-panel: #0a1413;
+  --bg-card: rgba(10, 20, 19, 0.74);
+  --bg-card-hover: rgba(16, 30, 28, 0.88);
+  --border: rgba(120, 255, 230, 0.08);
+  --border-strong: rgba(120, 255, 230, 0.18);
+}
+
+[data-theme="amber"] {
+  --bg: #080602;
+  --bg-elev: #0e0b05;
+  --bg-panel: #14110a;
+  --bg-card: rgba(20, 17, 10, 0.74);
+  --bg-card-hover: rgba(30, 25, 14, 0.88);
+  --border: rgba(255, 210, 120, 0.09);
+  --border-strong: rgba(255, 210, 120, 0.2);
+}
+
+[data-theme="monolith"] {
+  --bg: #0a0b0d;
+  --bg-elev: #101216;
+  --bg-panel: #16191f;
+  --bg-card: rgba(22, 25, 31, 0.76);
+  --bg-card-hover: rgba(30, 34, 42, 0.9);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.24);
+}

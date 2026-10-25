@@ -1,0 +1,337 @@
+/* ============ PAGE HEADER ============ */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding-bottom: 28px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-head__title {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-head h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.6vw, 2.9rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.page-head__lead {
+  max-width: 52ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.page-head__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ============ STATS GRID ============ */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.metric {
+  position: relative;
+  padding: 22px 22px 20px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22px;
+  width: 34px;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.metric:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 18px 46px -38px var(--accent-glow);
+}
+
+.metric__label {
+  font-size: 10.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.metric__value {
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.metric__value--accent {
+  color: var(--accent-2);
+}
+
+.metric__value--danger {
+  color: var(--danger);
+}
+
+.metric__value--success {
+  color: var(--success);
+}
+
+.metric__value--warn {
+  color: var(--warn);
+}
+
+.metric__hint {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ============ TWO COLUMN ============ */
+.grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.grid-two > .card {
+  min-width: 0;
+}
+
+/* ============ LIST ROWS ============ */
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.row__title {
+  min-width: 0;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__date {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.row__amount {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.row--overdue .row__title {
+  color: #ffb3bb;
+}
+
+/* ============ FILTERS ============ */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ============ AUTH ============ */
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: 56px;
+  align-items: center;
+  padding: 56px 0;
+}
+
+.auth__copy h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.2vw, 3.1rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+}
+
+.auth__copy p {
+  margin-top: 18px;
+  max-width: 42ch;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.auth__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.auth__fact {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.auth__card {
+  position: relative;
+  padding: 30px 28px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border-strong);
+  background:
+    radial-gradient(ellipse 70% 60% at 50% -10%, var(--accent-soft), transparent 62%),
+    var(--bg-card);
+  box-shadow: 0 40px 90px -70px var(--accent-glow);
+}
+
+.auth__card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.auth__card .card__hint {
+  margin-top: 6px;
+}
+
+.auth__demo {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--border-strong);
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.auth__demo code {
+  color: var(--accent-2);
+  font-family: var(--font-mono);
+}
+
+.auth__demo button {
+  margin-left: 6px;
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ============ ANALYSIS BARS ============ */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bar__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+}
+
+.bar__label {
+  color: var(--text-muted);
+}
+
+.bar__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.bar__track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 14px var(--accent-glow);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============ CARD FORM ============ */
+.card--form {
+  max-width: 720px;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 900px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding: 34px 0;
+  }
+  .auth__copy h1 {
+    max-width: 20ch;
+  }
+  .grid-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .row__date {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .page-head {
+    margin-bottom: 22px;
+  }
+  .auth__card {
+    padding: 24px 20px;
+  }
+  .table th,
+  .table td {
+    padding: 12px 12px;
+  }
+}

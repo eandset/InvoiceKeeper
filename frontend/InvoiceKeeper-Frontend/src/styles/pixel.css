@@ -1,0 +1,66 @@
+/* Пиксельный арт-объект в шапке лендинга.
+   Статичный: не следит за курсором (по требованию), только мягкое мерцание. */
+.pixel-ring {
+  position: relative;
+  width: 242px;
+  height: 242px;
+  flex-shrink: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pixel-ring canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pixel-ring__halo {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 68%);
+  filter: blur(26px);
+  opacity: 0.85;
+  z-index: -1;
+}
+
+.hero__visual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.hero__visual-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.hero__visual-caption::before {
+  content: "";
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+@media (max-width: 1080px) {
+  .pixel-ring {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero__visual {
+    display: none;
+  }
+}
