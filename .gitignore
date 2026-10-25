@@ -14,3 +14,14 @@ desktop.ini
 # Общие файлы окружения с паролями и токенами
 .env
 *.local
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local
+
+# Python cache
+tgbot/**/__pycache__/
+tgbot/*.pyc
+
+# Bot runtime state	gbot/bot-aiogram/seen_payments.json
