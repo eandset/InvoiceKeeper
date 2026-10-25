@@ -51,6 +51,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_BOT_URL=${VITE_BOT_URL:?Set VITE_BOT_URL in .env}
     restart: unless-stopped
     environment:
       - BACKEND_PORT=${BACKEND_PORT:?Set BACKEND_PORT in .env}
