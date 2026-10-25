@@ -268,30 +268,67 @@ public sealed class ApiAccessTests
     }
 
     [Fact]
-    public async Task Service_CannotAccessUserEndpoints()
+    public async Task Service_CanAccessAllowedEndpoints()
+    {
+        // Проверяем эндпоинты, к которым у сервиса ЕСТЬ доступ (UserOrAdminOrService или ServiceOrAdmin)
+        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", serviceToken: ApiFactory.BotToken);
+        var occurrences =
+            await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences", serviceToken: ApiFactory.BotToken);
+        var recurringGetList =
+            await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", serviceToken: ApiFactory.BotToken);
+
+        Assert.Equal(HttpStatusCode.OK, analytics.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, occurrences.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, recurringGetList.StatusCode);
+    }
+
+    [Fact]
+    public async Task Service_CannotAccessRestrictedUserAndAdminEndpoints()
     {
         var payment = await CreatePaymentAsync();
 
-        var payments = await SendAsync(HttpMethod.Get, "/api/v1/recurring-payments", serviceToken: ApiFactory.BotToken);
-        var analytics = await SendAsync(HttpMethod.Get, "/api/v1/payments/summary", serviceToken: ApiFactory.BotToken);
-        var occurrences = await SendAsync(HttpMethod.Get, "/api/v1/payment-occurrences", serviceToken: ApiFactory.BotToken);
+        // Запросы к эндпоинтам с повышенными требованиями безопасности (UserOrAdmin / AdminOnly)
         var occurrence = await SendAsync(
             HttpMethod.Get,
             $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
             serviceToken: ApiFactory.BotToken);
+
         var status = await SendAsync(
             HttpMethod.Patch,
             $"/api/v1/payment-occurrences/{payment.NextOccurrence!.Id}",
             body: new UpdatePaymentStatusDto(true, null),
             serviceToken: ApiFactory.BotToken);
+
         var users = await SendAsync(HttpMethod.Get, "/api/v1/users", serviceToken: ApiFactory.BotToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, payments.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, analytics.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, occurrences.StatusCode);
+        var recurringGetById = await SendAsync(
+            HttpMethod.Get,
+            $"/api/v1/recurring-payments/{payment.Id}",
+            serviceToken: ApiFactory.BotToken);
+
+        var recurringCreate = await SendAsync(
+            HttpMethod.Post,
+            "/api/v1/recurring-payments",
+            body: new CreatePaymentDto(
+                Title: "Test Subscription",
+                Amount: 999.99m,
+                Currency: "RUB",
+                NextPaymentDate: DateTime.UtcNow.AddDays(7),
+                Periodicity: "Monthly"
+            ),
+            serviceToken: ApiFactory.BotToken);
+
+        var recurringDelete = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/recurring-payments/{payment.Id}",
+            serviceToken: ApiFactory.BotToken);
+        
         Assert.Equal(HttpStatusCode.Forbidden, occurrence.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, status.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, users.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, recurringGetById.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, recurringCreate.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, recurringDelete.StatusCode);
     }
 
     // ---------- Роль Admin ----------
@@ -533,6 +570,3 @@ public sealed class ApiAccessTests
         return _client.SendAsync(request);
     }
 }
-
-
-
