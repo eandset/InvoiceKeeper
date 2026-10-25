@@ -9,6 +9,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5164',
         changeOrigin: true
+      },
+      '/swagger': {
+        target: 'http://localhost:5164',
+        changeOrigin: true
       }
     }
   }
