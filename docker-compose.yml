@@ -1,4 +1,7 @@
+version: '3.8'
+
 services:
+  # 1. База данных
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -17,6 +20,7 @@ services:
       retries: 10
       start_period: 10s
 
+  # 2. Бэкенд (.NET 10)
   backend:
     build:
       context: .
@@ -41,6 +45,31 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  # 3. Фронтенд (React + Vite / Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # 4. Telegram Бот (Python)
+  tgbot:
+    build:
+      context: ./tgbot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - API_URL=http://backend:8080/api/v1
+      - BOT_SERVICE_TOKEN=${BOT_SERVICE_TOKEN}
+      - TARGET_CHAT_ID=${TARGET_CHAT_ID}
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
